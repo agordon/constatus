@@ -1183,7 +1183,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 				"<ul>";
 
 			for(instance_t * inst : cfg -> instances)
-				reply += myformat("<li><a href=\"/index.html?%lx\">%s</a>", hash(inst -> name), inst -> name.c_str());
+				reply += myformat("<li><a href=\"index.html?%lx\">%s</a>", hash(inst -> name), inst -> name.c_str());
 
 			reply += "</ul></div>";
 		}
