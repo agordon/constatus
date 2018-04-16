@@ -491,7 +491,6 @@ std::string describe_interface(const interface *const i)
 source *find_source(instance_t *const inst)
 {
 	for(interface *i : inst -> interfaces) {
-		printf("%p\n", i);
 		if (i -> get_class_type() == CT_SOURCE)
 			return (source *)i;
 	}
@@ -1021,10 +1020,6 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	sigfillset(&all_sigs);
 	pthread_sigmask(SIG_BLOCK, &all_sigs, NULL);
 
-	source *const s = inst ? find_source(inst) : NULL;
-	if (s)
-		s -> register_user();
-
 	char request_headers[65536] = { 0 };
 	int h_n = 0;
 
@@ -1106,21 +1101,30 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 			*q = 0x00;
 
 			pars = un_url_escape(q + 1);
+
+			if (!inst)
+				inst = find_instance_by_name_hash(cfg, pars);
 		}
 	}
 
-	if ((strcmp(path, "index.html") == 0 || strcmp(path, "") == 0) && pars)
-		inst = find_instance_by_name_hash(cfg, pars);
+	source *const s = inst ? find_source(inst) : NULL;
+	if (s)
+		s -> register_user();
+
+	const std::string cur_hash = inst ? myformat("?%lx", hash(inst -> name)) : "";
+
+	if (inst)
+	printf("%s\n", inst -> name.c_str());
 
 	const std::string page_header = myformat(html_header.c_str(), inst ? inst -> name.c_str() : "(everything)");
 
-	if (strcmp(path, "stream.mjpeg") == 0 || motion_compatible)
+	if ((strcmp(path, "stream.mjpeg") == 0 || motion_compatible) && s)
 		send_mjpeg_stream(cfd, s, fps, quality, get, time_limit, filters, global_stopflag, r, resize_w, resize_h);
-	else if (strcmp(path, "stream.mpng") == 0)
+	else if (strcmp(path, "stream.mpng") == 0 && s)
 		send_mpng_stream(cfd, s, fps, get, time_limit, filters, global_stopflag, r, resize_w, resize_h);
-	else if (strcmp(path, "image.png") == 0)
+	else if (strcmp(path, "image.png") == 0 && s)
 		send_png_frame(cfd, s, get, filters, r, resize_w, resize_h);
-	else if (strcmp(path, "image.jpg") == 0)
+	else if (strcmp(path, "image.jpg") == 0 && s)
 		send_jpg_frame(cfd, s, get, quality, filters, r, resize_w, resize_h);
 	else if (strcmp(path, "stylesheet.css") == 0) {
 		struct stat st;
@@ -1135,7 +1139,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	}
 	else if (strcmp(path, "stream.html") == 0)
 	{
-		std::string reply = http_200_header + page_header + "<img src=\"stream.mjpeg\">" + html_tail;
+		std::string reply = http_200_header + page_header + myformat("<img src=\"stream.mjpeg%s\">", cur_hash.c_str()) + html_tail;
 
 		if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
 			log(LL_DEBUG, "short write on response header");
@@ -1146,12 +1150,12 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 
 		if (inst) {
 			reply = http_200_header + page_header + "<div id=\"main\">"
-				"<ul>"
-				"<li><a href=\"stream.mjpeg\">MJPEG stream</a>"
-				"<li><a href=\"stream.html\">Same MJPEG stream but in a HTML wrapper</a>"
-				"<li><a href=\"stream.mpng\">MPNG stream</a>"
-				"<li><a href=\"image.jpg\">Show snapshot in JPG format</a>"
-				"<li><a href=\"image.png\">Show snapshot in PNG format</a>";
+				"<ul>" +
+				myformat("<li><a href=\"stream.mjpeg%s\">MJPEG stream</a>"
+				"<li><a href=\"stream.html%s\">Same MJPEG stream but in a HTML wrapper</a>"
+				"<li><a href=\"stream.mpng%s\">MPNG stream</a>"
+				"<li><a href=\"image.jpg%s\">Show snapshot in JPG format</a>"
+				"<li><a href=\"image.png%s\">Show snapshot in PNG format</a>", cur_hash.c_str(), cur_hash.c_str(), cur_hash.c_str(), cur_hash.c_str(), cur_hash.c_str());
 
 			if (allow_admin) {
 				reply += "<li><a href=\"snapshot-img/\">Take a snapshot and store it on disk</a>"
