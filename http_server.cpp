@@ -499,6 +499,18 @@ source *find_source(instance_t *const inst)
 	return NULL;
 }
 
+instance_t *find_instance_by_interface(const configuration_t *const cfg, const interface *i_f)
+{
+	for(instance_t * inst : cfg -> instances) {
+		for(interface *cur : inst -> interfaces) {
+			if (cur == i_f)
+				return inst;
+		}
+	}
+
+	return NULL;
+}
+
 interface *find_by_id(instance_t *const inst, const std::string & id)
 {
 	for(interface *i : inst -> interfaces) {
@@ -716,13 +728,13 @@ std::string run_rest(configuration_t *const cfg, const std::string & path, const
 		}
 	}
 	else if (cmd && parts -> at(1) == "start-a-recording" && i -> get_class_type() == CT_SOURCE) {
-		interface *i = start_a_video((source *)i, snapshot_dir, quality);
+		interface *str = start_a_video((source *)i, snapshot_dir, quality);
 
-		if (i) {
+		if (str) {
 			json_object_set_new(json, "msg", json_string("OK"));
 			json_object_set_new(json, "result", json_true());
 
-			// FIXME inst -> interfaces.push_back(i);
+			find_instance_by_interface(cfg, i) -> interfaces.push_back(str);
 		}
 		else {
 			json_object_set_new(json, "msg", json_string("failed"));
