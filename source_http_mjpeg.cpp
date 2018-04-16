@@ -99,7 +99,7 @@ static size_t write_data(void *ptr, size_t size, size_t nmemb, void *mypt)
 
 	w -> headers -> latest_io = get_us();
 
-	printf("h:%d  n:%zu req:%zu\n", w -> header, w -> n, w -> req_len);
+	// printf("h:%d  n:%zu req:%zu\n", w -> header, w -> n, w -> req_len);
 
 process:
 	if (w -> header) {
