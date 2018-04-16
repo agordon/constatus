@@ -8,6 +8,7 @@
 typedef struct
 {
 	std::vector<interface *> interfaces;
+	std::string name;
 } instance_t;
 
 typedef struct

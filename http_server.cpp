@@ -511,6 +511,18 @@ instance_t *find_instance_by_interface(const configuration_t *const cfg, const i
 	return NULL;
 }
 
+instance_t *find_instance_by_name_hash(const configuration_t *const cfg, const std::string & hashed_name)
+{
+	for(instance_t * inst : cfg -> instances) {
+		std::string cur = myformat("%lx", hash(inst -> name));
+
+		if (cur == hashed_name)
+			return inst;
+	}
+
+	return NULL;
+}
+
 interface *find_by_id(instance_t *const inst, const std::string & id)
 {
 	for(interface *i : inst -> interfaces) {
@@ -992,23 +1004,26 @@ const std::string html_header =
 		"<link rel=\"shortcut icon\" href=\"/favicon.ico\">"
 		"<title>" NAME " " VERSION "</title>"
 		"</head>"
-		"<body>";
+		"<body>"
+		"<h1>" NAME " " VERSION " / %s</h1>";
 
 const std::string html_tail =
 		"<p><br><br><br></p><hr><div id=\"tail\"><p>" NAME " was written by folkert@vanheusden.com</p></div>"
 		"</body>"
 		"</html>";
 
-const std::string action_failed = "<h1>%s</h1><p>Action failed</p>";
-const std::string action_succeeded = "<h1>%s</h1><p>Action succeeded</p>";
+const std::string action_failed = "<h2>%s</h2><p>Action failed</p>";
+const std::string action_succeeded = "<h2>%s</h2><p>Action succeeded</p>";
 
-void handle_http_client_single(int cfd, source *s, double fps, int quality, int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, instance_t *const cfg, const std::string & snapshot_dir, const bool allow_admin, const bool archive_acces, std::mutex *const cfg_lock)
+void handle_http_client(int cfd, double fps, int quality, int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, instance_t *inst, const std::string & snapshot_dir, const bool allow_admin, const bool archive_acces, configuration_t *const cfg)
 {
 	sigset_t all_sigs;
 	sigfillset(&all_sigs);
 	pthread_sigmask(SIG_BLOCK, &all_sigs, NULL);
 
-	s -> register_user();
+	source *const s = inst ? find_source(inst) : NULL;
+	if (s)
+		s -> register_user();
 
 	char request_headers[65536] = { 0 };
 	int h_n = 0;
@@ -1094,6 +1109,11 @@ void handle_http_client_single(int cfd, source *s, double fps, int quality, int 
 		}
 	}
 
+	if ((strcmp(path, "index.html") == 0 || strcmp(path, "") == 0) && pars)
+		inst = find_instance_by_name_hash(cfg, pars);
+
+	const std::string page_header = myformat(html_header.c_str(), inst ? inst -> name.c_str() : "(everything)");
+
 	if (strcmp(path, "stream.mjpeg") == 0 || motion_compatible)
 		send_mjpeg_stream(cfd, s, fps, quality, get, time_limit, filters, global_stopflag, r, resize_w, resize_h);
 	else if (strcmp(path, "stream.mpng") == 0)
@@ -1115,20 +1135,23 @@ void handle_http_client_single(int cfd, source *s, double fps, int quality, int 
 	}
 	else if (strcmp(path, "stream.html") == 0)
 	{
-		std::string reply = http_200_header + html_header + "<img src=\"stream.mjpeg\">" + html_tail;
+		std::string reply = http_200_header + page_header + "<img src=\"stream.mjpeg\">" + html_tail;
 
 		if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
 			log(LL_DEBUG, "short write on response header");
 	}
 	else if (strcmp(path, "index.html") == 0 || strcmp(path, "") == 0)
 	{
-		std::string reply = http_200_header + html_header + "<div id=\"main\"><h1>" NAME " " VERSION "</h1>"
-			"<ul>"
-			"<li><a href=\"stream.mjpeg\">MJPEG stream</a>"
-			"<li><a href=\"stream.html\">Same MJPEG stream but in a HTML wrapper</a>"
-			"<li><a href=\"stream.mpng\">MPNG stream</a>"
-			"<li><a href=\"image.jpg\">Show snapshot in JPG format</a>"
-			"<li><a href=\"image.png\">Show snapshot in PNG format</a>";
+		std::string reply = "???";
+
+		if (inst) {
+			reply = http_200_header + page_header + "<div id=\"main\">"
+				"<ul>"
+				"<li><a href=\"stream.mjpeg\">MJPEG stream</a>"
+				"<li><a href=\"stream.html\">Same MJPEG stream but in a HTML wrapper</a>"
+				"<li><a href=\"stream.mpng\">MPNG stream</a>"
+				"<li><a href=\"image.jpg\">Show snapshot in JPG format</a>"
+				"<li><a href=\"image.png\">Show snapshot in PNG format</a>";
 
 			if (allow_admin) {
 				reply += "<li><a href=\"snapshot-img/\">Take a snapshot and store it on disk</a>"
@@ -1139,17 +1162,27 @@ void handle_http_client_single(int cfd, source *s, double fps, int quality, int 
 				reply += "<li><a href=\"view-snapshots/\">View recordings</a>";
 			}
 
-			reply += "</ul></div>"
-			;
+			reply += "</ul></div>";
 
-		if (allow_admin) {
-			cfg_lock -> lock();
-			for(interface *i : cfg -> interfaces)
-				reply += describe_interface(i);
-			cfg_lock -> unlock();
+			if (allow_admin) {
+				cfg -> lock.lock();
+
+				for(interface *i : inst -> interfaces)
+					reply += describe_interface(i);
+				cfg -> lock.unlock();
+			}
+
+			reply += html_tail; 
 		}
+		else {
+			reply = http_200_header + page_header + "<div id=\"main\">"
+				"<ul>";
 
-		reply += html_tail; 
+			for(instance_t * inst : cfg -> instances)
+				reply += myformat("<li><a href=\"/index.html?%lx\">%s</a>", hash(inst -> name), inst -> name.c_str());
+
+			reply += "</ul></div>";
+		}
 
 		if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
 			log(LL_DEBUG, "short write on response header");
@@ -1172,7 +1205,7 @@ void handle_http_client_single(int cfd, source *s, double fps, int quality, int 
 		free(file);
 	}
 	else if (strcmp(path, "view-snapshots/") == 0 && (archive_acces || allow_admin)) {
-		std::string reply = http_200_header + html_header + "<h1>list of files in " + snapshot_dir + "</h1><table border=1>";
+		std::string reply = http_200_header + page_header + "<h2>list of files in " + snapshot_dir + "</h2><table border=1>";
 
 		auto *files = load_filelist(snapshot_dir, "");
 
@@ -1214,12 +1247,12 @@ void handle_http_client_single(int cfd, source *s, double fps, int quality, int 
 	else if (strcmp(path, "pause") == 0 || strcmp(path, "unpause") == 0) {
 		std::string reply = http_200_header + "???";
 
-		cfg_lock -> lock();
-		if (pause(cfg, pars ? pars : "", strcmp(path, "pause") == 0))
-			reply = http_200_header + html_header + myformat(action_succeeded.c_str(), "pause/unpause") + html_tail;
+		cfg -> lock.lock();
+		if (pause(inst, pars ? pars : "", strcmp(path, "pause") == 0))
+			reply = http_200_header + page_header + myformat(action_succeeded.c_str(), "pause/unpause") + html_tail;
 		else
-			reply = http_200_header + html_header + myformat(action_failed.c_str(), "pause/unpause") + html_tail;
-		cfg_lock -> unlock();
+			reply = http_200_header + page_header + myformat(action_failed.c_str(), "pause/unpause") + html_tail;
+		cfg -> lock.unlock();
 
 		if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
 			log(LL_DEBUG, "short write on response header");
@@ -1227,14 +1260,14 @@ void handle_http_client_single(int cfd, source *s, double fps, int quality, int 
 	else if (strcmp(path, "start") == 0 || strcmp(path, "stop") == 0) {
 		std::string reply = http_200_header + "???";
 
-		cfg_lock -> lock();
-		interface *i = find_by_id(cfg, pars);
+		cfg -> lock.lock();
+		interface *i = find_by_id(inst, pars);
 
 		if (start_stop(i, strcmp(path, "start") == 0))
-			reply = http_200_header + html_header + myformat(action_succeeded.c_str(), "start/stop") + html_tail;
+			reply = http_200_header + page_header + myformat(action_succeeded.c_str(), "start/stop") + html_tail;
 		else
-			reply = http_200_header + html_header + myformat(action_failed.c_str(), "start/stop") + html_tail;
-		cfg_lock -> unlock();
+			reply = http_200_header + page_header + myformat(action_failed.c_str(), "start/stop") + html_tail;
+		cfg -> lock.unlock();
 
 		if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
 			log(LL_DEBUG, "short write on response header");
@@ -1242,16 +1275,16 @@ void handle_http_client_single(int cfd, source *s, double fps, int quality, int 
 	else if (strcmp(path, "restart") == 0) {
 		std::string reply = http_200_header + "???";
 
-		cfg_lock -> lock();
-		interface *i = find_by_id(cfg, pars);
+		cfg -> lock.lock();
+		interface *i = find_by_id(inst, pars);
 
 		if (start_stop(i, false)) {
 			if (start_stop(i, true))
-				reply = http_200_header + html_header + myformat(action_succeeded.c_str(), "restart") + html_tail;
+				reply = http_200_header + page_header + myformat(action_succeeded.c_str(), "restart") + html_tail;
 			else
-				reply = http_200_header + html_header + myformat(action_failed.c_str(), "restart") + html_tail;
+				reply = http_200_header + page_header + myformat(action_failed.c_str(), "restart") + html_tail;
 		}
-		cfg_lock -> unlock();
+		cfg -> lock.unlock();
 
 		if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
 			log(LL_DEBUG, "short write on response header");
@@ -1260,9 +1293,9 @@ void handle_http_client_single(int cfd, source *s, double fps, int quality, int 
 		std::string reply = http_200_header + "???";
 
 		if (take_a_picture(s, snapshot_dir, quality))
-			reply = http_200_header + html_header + myformat(action_succeeded.c_str(), "snapshot image") + html_tail;
+			reply = http_200_header + page_header + myformat(action_succeeded.c_str(), "snapshot image") + html_tail;
 		else
-			reply = http_200_header + html_header + myformat(action_failed.c_str(), "snapshot image") + html_tail;
+			reply = http_200_header + page_header + myformat(action_failed.c_str(), "snapshot image") + html_tail;
 
 		if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
 			log(LL_DEBUG, "short write on response header");
@@ -1272,14 +1305,14 @@ void handle_http_client_single(int cfd, source *s, double fps, int quality, int 
 
 		std::string reply = http_200_header + "???";
 		if (i) {
-			reply = http_200_header + html_header + myformat(action_succeeded.c_str(), "snapshot image") + html_tail;
+			reply = http_200_header + page_header + myformat(action_succeeded.c_str(), "snapshot image") + html_tail;
 
-			cfg_lock -> lock();
-			cfg -> interfaces.push_back(i);
-			cfg_lock -> unlock();
+			cfg -> lock.lock();
+			inst -> interfaces.push_back(i);
+			cfg -> lock.unlock();
 		}
 		else {
-			reply = http_200_header + html_header + myformat(action_failed.c_str(), "snapshot image") + html_tail;
+			reply = http_200_header + page_header + myformat(action_failed.c_str(), "snapshot image") + html_tail;
 		}
 
 		if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
@@ -1298,142 +1331,8 @@ void handle_http_client_single(int cfd, source *s, double fps, int quality, int 
 
 	close(cfd);
 
-	s -> unregister_user();
-}
-
-void handle_http_client(int cfd, configuration_t *const cfg, std::atomic_bool *const global_stopflag, const std::string & snapshot_dir, const bool archive_acces)
-{
-	sigset_t all_sigs;
-	sigfillset(&all_sigs);
-	pthread_sigmask(SIG_BLOCK, &all_sigs, NULL);
-
-	char request_headers[65536] = { 0 };
-	int h_n = 0;
-
-	struct pollfd fds[1] = { { cfd, POLLIN, 0 } };
-
-	for(;!*global_stopflag;) {
-		if (poll(fds, 1, 250) == 0)
-			continue;
-
-		int rc = read(cfd, &request_headers[h_n], sizeof request_headers - h_n - 1);
-		if (rc == -1)
-		{
-			if (errno == EINTR || errno == EAGAIN)
-				continue;
-
-			log(LL_DEBUG, "error receiving request headers");
-			close(cfd);
-			return;
-		}
-		else if (rc == 0)
-		{
-			log(LL_DEBUG, "error receiving request headers");
-			close(cfd);
-			return;
-		}
-
-		h_n += rc;
-
-		request_headers[h_n] = 0x00;
-
-		if (strstr(request_headers, "\r\n\r\n") || strstr(request_headers, "\n\n"))
-			break;
-	}
-
-	char *Path = NULL;
-
-	bool get = true;
-	if (strncmp(request_headers, "GET ", 4) == 0)
-	{
-		get = true;
-		Path = strdup(&request_headers[4]);
-	}
-	else if (strncmp(request_headers, "HEAD ", 5) == 0)
-	{
-		get = false;
-		Path = strdup(&request_headers[5]);
-	}
-	else
-	{
-		close(cfd);
-		return;
-	}
-
-	char *path = Path;
-	while(*path == '/')
-		path++;
-
-	char *pars = NULL;
-	{
-		char *dummy = strchr(path, '\r');
-		if (!dummy)
-			dummy = strchr(path, '\n');
-		if (dummy)
-			*dummy = 0x00;
-
-		dummy = strchr(path, ' ');
-		if (dummy)
-			*dummy = 0x00;
-
-		log(LL_DEBUG, "URL: %s", path);
-
-		char *q = strchr(path, '?');
-		if (q) {
-			*q = 0x00;
-
-			pars = un_url_escape(q + 1);
-		}
-	}
-
-	if (strcmp(path, "stylesheet.css") == 0) {
-		struct stat st;
-		if (stat("stylesheet.css", &st) == 0)
-			send_file(cfd, "./", "stylesheet.css");
-		else {
-			std::string reply = http_200_header + "\r\n";
-
-			if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
-				log(LL_DEBUG, "short write on response header");
-		}
-	}
-	else if (strcmp(path, "index.html") == 0 || strcmp(path, "") == 0)
-	{
-		std::string reply = http_200_header + html_header + "<div id=\"main\"><h1>" NAME " " VERSION "</h1>"
-			"<ul>"
-			"<li><a href=\"list-instances.html\">list instances</a>"
-			"<li><a href=\"list-all-modules.html\">list all running modules for all instances</a>";
-			reply += "</ul></div>"
-			;
-
-		reply += html_tail; 
-
-		if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
-			log(LL_DEBUG, "short write on response header");
-	}
-	else if (strncmp(path, "favicon.ico", 11) == 0) {
-		struct stat st;
-		if (stat("favicon.ico", &st) == 0)
-			send_file(cfd, "./", "favicon.ico");
-		else {
-			std::string reply = http_200_header + "\r\n";
-
-			if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
-				log(LL_DEBUG, "short write on response header");
-		}
-	}
-	else {
-	do404:
-		log(LL_INFO, "Path %s not found", path);
-
-		if (WRITE(cfd, "HTTP/1.0 404\r\n\r\nwhat?", 4) <= 0)
-			log(LL_DEBUG, "short write on response header");
-	}
-
-	free(Path);
-	free(pars);
-
-	close(cfd);
+	if (s)
+		s -> unregister_user();
 }
 
 void * handle_http_client_thread(void *ct_in)
@@ -1445,13 +1344,8 @@ void * handle_http_client_thread(void *ct_in)
 	if (ct -> is_rest) {
 		handle_rest(ct -> fd, ct -> cfg, ct -> global_stopflag, ct -> snapshot_dir, ct -> quality);
 	}
-	else if (ct -> inst) {
-		source *const s = find_source(ct -> inst);
-
-		handle_http_client_single(ct -> fd, s, ct -> fps, ct -> quality, ct -> time_limit, ct -> filters, ct -> global_stopflag, ct -> r, ct -> resize_w, ct -> resize_h, ct -> motion_compatible, ct -> inst, ct -> snapshot_dir, ct -> allow_admin, ct -> archive_acces, &ct -> cfg -> lock);
-	}
 	else {
-		handle_http_client(ct -> fd, ct -> cfg, ct -> global_stopflag, ct -> snapshot_dir, ct -> archive_acces);
+		handle_http_client(ct -> fd, ct -> fps, ct -> quality, ct -> time_limit, ct -> filters, ct -> global_stopflag, ct -> r, ct -> resize_w, ct -> resize_h, ct -> motion_compatible, ct -> inst, ct -> snapshot_dir, ct -> allow_admin, ct -> archive_acces, ct -> cfg);
 	}
 
 	delete ct;

@@ -556,6 +556,8 @@ int main(int argc, char *argv[])
 		const Setting &instance_root = o_instances[i_loop];
 		instance_t *ci = new instance_t; // ci = current instance
 
+		ci ->name = cfg_str(instance_root, "instance-name", "instance-name", false, "");
+
 		//***
 		const Setting &o_source = instance_root["source"];
 
@@ -861,10 +863,18 @@ int main(int argc, char *argv[])
 			std::string cur = i -> gen_id();
 
 			if (check_id.find(cur) != check_id.end())
-				log(LL_WARNING, "There are multiple modules/sections with the same ID (%s): this will give problems when trying to use the REST interface!", i -> get_id_str().c_str());
+				log(LL_WARNING, "There are multiple modules with the same ID (%s): this will give problems when trying to use the REST interface!", i -> get_id_str().c_str());
 			else
 				check_id.insert(cur);
 		}
+	}
+
+	check_id.clear();
+	for(instance_t * inst : cfg.instances) {
+		if (check_id.find(inst -> name) != check_id.end())
+			log(LL_WARNING, "There are multiple instances with the same ID (%s): this will give problems when trying to use the REST and WEB-interfaces!", inst -> name.c_str());
+		else
+			check_id.insert(inst -> name);
 	}
 
 	cfg.lock.unlock();
