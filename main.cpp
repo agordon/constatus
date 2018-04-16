@@ -673,7 +673,7 @@ int main(int argc, char *argv[])
 				int resize_w = cfg_int(server, "resize-width", "resize picture width to this (-1 to disable)", true, -1);
 				int resize_h = cfg_int(server, "resize-height", "resize picture height to this (-1 to disable)", true, -1);
 
-				bool local_instance = cfg_bool(server, "local-instance", "show only parameters related to this instance", true, false);
+				bool local_instance = cfg_bool(server, "local-instance", "show only parameters related to this instance", true, true);
 				bool motion_compatible = cfg_bool(server, "motion-compatible", "only stream MJPEG and do not wait for HTTP request", true, false);
 				bool allow_admin = cfg_bool(server, "allow-admin", "when enabled, you can partially configure services", true, false);
 				bool is_rest = cfg_bool(server, "is-rest", "when enabled then this is a REST (only!) interface", true, false);
