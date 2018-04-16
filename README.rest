@@ -3,7 +3,7 @@ Constatus REST interface
 URL: http://HOST:PORT/rest/[ID|"cmd"]/...
 
  * host/port are a http-server endpoint configured in constatus.cfg
-   This end-point can not have "motion compatible" enabled. If you require such an endpoint, configure a second for the rest interface.
+   This end-point must have "is-rest" set to true (enabled). If you require a regular web-interface, configure a second (or third) for that.
 
 
 After "rest/", the either a hex-ID or the string "cmd" follows.
@@ -12,6 +12,7 @@ e.g.:
 * http://HOST:PORT/rest/cmd/list-files
 
 Each module, as you may have seen in constatus.cfg, has an 'id="..."' identifier. This identifier is hashed and the result is used to indicate which module the action is to be invoked on, this is the hex-ID.
+
 To known which hex-ID is used for each module, invoke the following url:
 * http://HOST:PORT/rest/cmd/list
 This can result in e.g.:
@@ -76,18 +77,18 @@ The following end-points are availble:
 * not requiring an ID
 
 	* list
-	  Get a list of modules.
-
-	* list-files
-	  Get a list of recorded files.
-
-	* take-a-snapshot
-	  Take a picture immediately.
-
-	* start-a-recording
-	  Start recording a move immediately.
+	  Get a list of (running) modules.
 
 * these require a module-ID
+
+	* list-files
+	  Get a list of recorded files for the selected target.
+
+	* take-a-snapshot
+	  Take a picture immediately via the selected soruce.
+
+	* start-a-recording
+	  Start recording a move immediately via the selected soruce.
 
 	* pause
 	  Pause a module with whatever it is doing.
