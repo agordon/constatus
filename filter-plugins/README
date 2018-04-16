@@ -1,0 +1,14 @@
+- demo is a filter in C, inverting the red channel
+- demo2 is a filter in C++, swapping the red and the blue channel
+- demoocv is a filter using OpenCV, it finds the contours in an image
+
+constatus configuration example:
+...
+                "filters" : [
+                                {
+                                        "type" : "filter-plugin",
+                                        "file" : "filter-plugins/demoocv.so.0.1",
+                                        "par" : ""
+                                }
+                        ]
+...

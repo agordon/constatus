@@ -1,0 +1,3 @@
+- demo.cpp is a wandering pixel
+
+- vnc.cpp is a VNC client. as parameters it requires 'ip-address port-number password' (where password is optional if the VNC server is not requesting it)

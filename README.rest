@@ -1,0 +1,151 @@
+Constatus REST interface
+------------------------
+URL: http://HOST:PORT/rest/[ID|"cmd"]/...
+
+ * host/port are a http-server endpoint configured in constatus.cfg
+   This end-point can not have "motion compatible" enabled. If you require such an endpoint, configure a second for the rest interface.
+
+
+After "rest/", the either a hex-ID or the string "cmd" follows.
+"cmd" means that an action is to be invoked which is not for a specific module.
+e.g.:
+* http://HOST:PORT/rest/cmd/list-files
+
+Each module, as you may have seen in constatus.cfg, has an 'id="..."' identifier. This identifier is hashed and the result is used to indicate which module the action is to be invoked on, this is the hex-ID.
+To known which hex-ID is used for each module, invoke the following url:
+* http://HOST:PORT/rest/cmd/list
+This can result in e.g.:
+	{
+		"msg": "OK",
+		"result": true,
+		"data": [{
+			"id": "0x5562cd776f90",
+			"id-str": "stream only, motion compatible",
+			"id-descr": "[0.0.0.0]:8081",
+			"type": "http-server",
+			"running": "true",
+			"enabled": "true"
+		}, {
+			"id": "0x5562cd7773e0",
+			"id-str": "admin interface",
+			"id-descr": "[0.0.0.0]:8082",
+			"type": "http-server",
+			"running": "true",
+			"enabled": "true"
+		}, {
+			"id": "0x5562cd778970",
+			"id-str": "motion trigger(s)",
+			"id-descr": "",
+			"type": "motion-trigger",
+			"running": "true",
+			"enabled": "true"
+		}, {
+			"id": "0x5562cd778f40",
+			"id-str": "write everything to disk",
+			"id-descr": "/data2/voordeur / hour-",
+			"type": "stream-writer",
+			"running": "true",
+			"enabled": "true"
+		}, {
+			"id": "0x5562cd776bc0",
+			"id-str": "",
+			"id-descr": "http://localhost:8089/",
+			"type": "source",
+			"running": "true",
+			"enabled": "true"
+		}]
+	}
+
+As you see in this example there are 3 HTTP servers (0x5562cd776f90, 0x5562cd7773e0, 0x5562cd7780a0), a motion-trigger(0x5562cd778970), etc.
+Note that the hex-ID changes as soon as you change the ID in the configuration-file. Also note that each ID in the configuration-file must be unique if you wish to use the REST interface!
+
+Each end-point returns the following json:
+	{
+		"msg": "OK",
+		"result": true
+	}
+or if there's any data:
+	{
+		"msg": "OK",
+		"result": true,
+		"data": ...
+	}
+
+The following end-points are availble:
+
+* not requiring an ID
+
+	* list
+	  Get a list of modules.
+
+	* list-files
+	  Get a list of recorded files.
+
+	* take-a-snapshot
+	  Take a picture immediately.
+
+	* start-a-recording
+	  Start recording a move immediately.
+
+* these require a module-ID
+
+	* pause
+	  Pause a module with whatever it is doing.
+
+	* unpause
+	  Unpause a module with whatever it is doing.
+
+	* stop
+	  Stop a module with whatever it is doing.
+
+	* start
+
+	* list-motion-trigger
+	  Retrieve a list of parameters that can be set on a motion-trigger module.
+	  e.g.:
+		{
+		  "msg": "OK",
+		  "result": true,
+		  "data": [
+		    {
+		      "key": "noise_level",
+		      "type": "int",
+		      "value": "32"
+		    },
+		    {
+		      "key": "percentage_pixels_changed",
+		      "type": "double",
+		      "value": "0.600000"
+		    },
+		    {
+		      "key": "keep_recording_n_frames",
+		      "type": "int",
+		      "value": "15"
+		    },
+		    {
+		      "key": "ignore_n_frames_after_recording",
+		      "type": "int",
+		      "value": "5"
+		    },
+		    {
+		      "key": "pre_record_count",
+		      "type": "int",
+		      "value": "1"
+		    },
+		    {
+		      "key": "max_fps",
+		      "type": "double",
+		      "value": "-1.000000"
+		    }
+		  ]
+		}
+
+	* configure-motion-trigger
+	  Set a parameter on a motion trigger module.
+	  URL:
+		http://HOST:PORT/rest/ID/configure-motion-trigger/KEY/VALUE
+	  e.g.:
+		http://HOST:PORT/rest/ID/configure-motion-trigger/max_fps/5.0
+
+
+FIXME

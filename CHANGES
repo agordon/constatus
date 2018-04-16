@@ -1,0 +1,21 @@
+v2.0
+ * since this version you can have multiple cameras per process
+   This requires a small change in the configuration-file for existing setups. Please check constatus.cfg for an example, or:
+
+	instances = ({
+	   source = {
+	   }
+
+	   motion_trigger = {
+	   }
+	},
+
+	/* ... */
+
+	{
+	   source = {
+	   }
+
+	   motion_trigger = {
+	   }
+	})

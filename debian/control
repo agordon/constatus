@@ -1,0 +1,12 @@
+Source: constatus
+Maintainer: Folkert van Heusden <mail@vanheusden.com>
+Section: graphics
+Priority: optional
+Standards-Version: 3.9.5
+Build-Depends: debhelper, libcurl4-openssl-dev, libjansson-dev, libjpeg62-turbo-dev, libpng-dev, libavcodec-dev, libavformat-dev, libavresample-dev, libavutil-dev, libswscale-dev, libcairo2-dev, libnetpbm10-dev
+Homepage: http://www.vanheusden.com/constatus/
+
+Package: constatus
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: A video monitoring program.

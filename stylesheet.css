@@ -1,0 +1,30 @@
+h1 {
+    font-family: Georgia, serif;
+    font-size: 18px;
+    font-weight: bold;
+    color: #111111;
+    letter-spacing: 1.4px;
+    border-bottom: solid 1px #000066;
+    text-transform: uppercase;
+}
+h2 {
+    font-family: Georgia, serif;
+    font-size: 14px;
+    font-weight: normal;
+    letter-spacing: 1.2px;
+    color: #111111;
+}
+p {
+    font-family: Verdana;
+    font-size: 11px;
+    color: #555555;
+    line-height: 1.5;
+    letter-spacing: .25px;
+}
+a {
+    color: #000000;
+}
+hr {
+    color: #000011;
+    border-color: inherit
+}
