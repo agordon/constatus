@@ -674,7 +674,7 @@ int main(int argc, char *argv[])
 				bool local_instance = cfg_bool(server, "local-instance", "show only parameters related to this instance", true, false);
 				bool motion_compatible = cfg_bool(server, "motion-compatible", "only stream MJPEG and do not wait for HTTP request", true, false);
 				bool allow_admin = cfg_bool(server, "allow-admin", "when enabled, you can partially configure services", true, false);
-				bool is_rest = cfg_bool(server, "allow-rest", "when enabled then this is a REST (only!) interface", true, false);
+				bool is_rest = cfg_bool(server, "is-rest", "when enabled then this is a REST (only!) interface", true, false);
 				bool archive_access = cfg_bool(server, "archive-access", "when enabled, you can retrieve recorded video/images", true, false);
 
 				std::string snapshot_dir = cfg_str(server, "snapshot-dir", "where to store snapshots (triggered by HTTP server). see \"allow-admin\".", true, "");
