@@ -431,10 +431,12 @@ void send_jpg_frame(int cfd, source *s, bool get, int quality, const std::vector
 	free(work);
 }
 
-std::string describe_interface(const interface *const i)
+std::string describe_interface(const instance_t *const inst, const interface *const i)
 {
-	std::string id_int = i -> gen_id();
-	std::string id_ext = i -> get_id_str();
+	unsigned long inst_hash = hash(inst -> name);
+
+	std::string module_int = i -> gen_id();
+	std::string module_ext = i -> get_id_str();
 
 	std::string type = "!!!", div = "some_section";
 	switch(i -> get_class_type()) {
@@ -463,25 +465,25 @@ std::string describe_interface(const interface *const i)
 			break;
 	}
 
-	if (id_ext.empty())
-		id_ext = type;
+	if (module_ext.empty())
+		module_ext = type;
 
-	std::string out = std::string("<div id=\"") + div + "\"><h2>" + id_ext + "</h2><p>description: " + i -> get_description() + "<br>type: " + type + "</p><ul>";
+	std::string out = std::string("<div id=\"") + div + "\"><h2>" + module_ext + "</h2><p>description: " + i -> get_description() + "<br>type: " + type + "</p><ul>";
 
 	if (i -> is_paused()) {
-		out += myformat("<li><a href=\"unpause?%s\">unpause</a>", id_int.c_str());
+		out += myformat("<li><a href=\"unpause?inst=%lx&module=%s\">unpause</a>", inst_hash, module_int.c_str());
 	}
 	else {
-		out += myformat("<li><a href=\"pause?%s\">pause</a>", id_int.c_str());
+		out += myformat("<li><a href=\"pause?inst=%lx&module=%s\">pause</a>", inst_hash, module_int.c_str());
 	}
 
 	if (i -> is_running()) {
-		out += myformat("<li><a href=\"stop?%s\">stop</a>", id_int.c_str());
+		out += myformat("<li><a href=\"stop?inst=%lx&module=%s\">stop</a>", inst_hash, module_int.c_str());
 	}
 	else {
-		out += myformat("<li><a href=\"start?%s\">start</a>", id_int.c_str());
+		out += myformat("<li><a href=\"start?inst=%lx&module=%s\">start</a>", inst_hash, module_int.c_str());
 	}
-	out += myformat("<li><a href=\"restart?%s\">restart</a>", id_int.c_str());
+	out += myformat("<li><a href=\"restart?inst=%lx&module=%s\">restart</a>", inst_hash, module_int.c_str());
 
 	out += "</ul></div>";
 
@@ -524,6 +526,9 @@ instance_t *find_instance_by_name_hash(const configuration_t *const cfg, const s
 
 interface *find_by_id(instance_t *const inst, const std::string & id)
 {
+	if (!inst)
+		return NULL;
+
 	for(interface *i : inst -> interfaces) {
 		std::string id_int = i -> gen_id();
 
@@ -911,12 +916,11 @@ void handle_rest(int cfd, configuration_t *const cfg, std::atomic_bool *const gl
 	close(cfd);
 }
 
-void send_file(const int cfd, const std::string & path, const char *const name)
+void send_file(const int cfd, const std::string & path, const char *const name, const bool dl)
 {
 	std::string complete_path = path + "/" + name;
 
 	std::string type = "text/html";
-	bool dl = false;
 	if (complete_path.size() >= 3) {
 		std::string ext = complete_path.substr(complete_path.size() -3);
 
@@ -932,8 +936,6 @@ void send_file(const int cfd, const std::string & path, const char *const name)
 			type = "text/css";
 		else if (ext == "flv")
 			type = "video/x-flv";
-
-		dl = ext == "avi" || ext == "flv";
 	}
 
 	log(LL_WARNING, "Sending file %s of type %s", complete_path.c_str(), type.c_str());
@@ -1081,7 +1083,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 			path++;
 	}
 
-	char *pars = NULL;
+	std::map<std::string, std::string> pars;
 
 	if (!motion_compatible) {
 		char *dummy = strchr(path, '\r');
@@ -1100,10 +1102,42 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 		if (q) {
 			*q = 0x00;
 
-			pars = un_url_escape(q + 1);
+			char *pars_str = un_url_escape(q + 1);
 
-			if (!inst)
-				inst = find_instance_by_name_hash(cfg, pars);
+			char *p = pars_str;
+			while(p) {
+				std::string pair;
+				char *end = strchr(p, '&');
+				if (end) {
+					pair = std::string(p, end - p);
+					p = end + 1;
+				}
+				else {
+					pair = std::string(p);
+					p = NULL;
+				}
+
+				std::string key, value;
+
+				ssize_t is = pair.find('=');
+				if (is == std::string::npos)
+					key = pair;
+				else {
+					key = pair.substr(0, is);
+					value = pair.substr(is + 1);
+				}
+
+				pars.insert(std::pair<std::string, std::string>(key, value));
+			}
+
+			free(pars_str);
+
+			if (!inst) {
+				auto inst_it = pars.find("inst");
+
+				if (inst_it != pars.end())
+					inst = find_instance_by_name_hash(cfg, inst_it -> second);
+			}
 		}
 	}
 
@@ -1111,7 +1145,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	if (s)
 		s -> register_user();
 
-	const std::string cur_hash = inst ? myformat("?%lx", hash(inst -> name)) : "";
+	const std::string cur_hash = inst ? myformat("?inst=%lx", hash(inst -> name)) : "";
 
 	if (inst)
 	printf("%s\n", inst -> name.c_str());
@@ -1129,7 +1163,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	else if (strcmp(path, "stylesheet.css") == 0) {
 		struct stat st;
 		if (stat("stylesheet.css", &st) == 0)
-			send_file(cfd, "./", "stylesheet.css");
+			send_file(cfd, "./", "stylesheet.css", false);
 		else {
 			std::string reply = http_200_header + "\r\n";
 
@@ -1158,8 +1192,8 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 				"<li><a href=\"image.png%s\">Show snapshot in PNG format</a>", cur_hash.c_str(), cur_hash.c_str(), cur_hash.c_str(), cur_hash.c_str(), cur_hash.c_str());
 
 			if (allow_admin) {
-				reply += "<li><a href=\"snapshot-img/\">Take a snapshot and store it on disk</a>"
-					"<li><a href=\"snapshot-video/\">Start a video recording</a>";
+				reply += myformat("<li><a href=\"snapshot-img/%s\">Take a snapshot and store it on disk</a>"
+					"<li><a href=\"snapshot-video/%s\">Start a video recording</a>", cur_hash.c_str(), cur_hash.c_str());
 			}
 
 			if (archive_acces) {
@@ -1172,7 +1206,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 				cfg -> lock.lock();
 
 				for(interface *i : inst -> interfaces)
-					reply += describe_interface(i);
+					reply += describe_interface(inst, i);
 				cfg -> lock.unlock();
 			}
 
@@ -1183,7 +1217,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 				"<ul>";
 
 			for(instance_t * inst : cfg -> instances)
-				reply += myformat("<li><a href=\"index.html?%lx\">%s</a>", hash(inst -> name), inst -> name.c_str());
+				reply += myformat("<li><a href=\"index.html?inst=%lx\">%s</a>", hash(inst -> name), inst -> name.c_str());
 
 			reply += "</ul></div>";
 		}
@@ -1192,40 +1226,65 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 			log(LL_DEBUG, "short write on response header");
 	}
 	else if ((strncmp(path, "view-snapshots/send-file", 24) == 0 || strncmp(path, "send-file", 9) == 0) && (archive_acces || allow_admin)) {
-		char *file = un_url_escape(pars ? pars : "FAIL");
+		auto file_it = pars.find("file");
+		std::string file;
 
-		if (pars && validate_file(snapshot_dir, file)) {
-			send_file(cfd, snapshot_dir, file);
+		if (file_it != pars.end())
+			file = file_it -> second;
+
+		bool force_dl = pars.find("download") != pars.end();
+
+		if (!file.empty() && validate_file(snapshot_dir, file)) {
+			send_file(cfd, snapshot_dir, file.c_str(), force_dl);
 		}
 		else {
-			log(LL_WARNING, "%s is not a valid file", file);
+			log(LL_WARNING, "%s is not a valid file", file.c_str());
 
 			std::string reply = "HTTP/1.0 404\r\n\r\nfailed";
 
 			if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
 				log(LL_DEBUG, "short write on response header");
 		}
+	}
+	else if ((strncmp(path, "view-snapshots/view-file", 24) == 0 || strncmp(path, "view-file", 9) == 0) && (archive_acces || allow_admin)) {
+		auto file_it = pars.find("file");
+		std::string file;
 
-		free(file);
+		if (file_it != pars.end())
+			file = file_it -> second;
+
+		std::string reply = http_200_header + page_header + 
+			myformat("<video controls autoplay><source src=\"send-file?file=%s\">Your browser does not support the video tag.</video>", file.c_str())
+			+ html_tail;
+
+		if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
+			log(LL_DEBUG, "short write on response");
 	}
 	else if (strcmp(path, "view-snapshots/") == 0 && (archive_acces || allow_admin)) {
 		std::string reply = http_200_header + page_header + "<h2>list of files in " + snapshot_dir + "</h2><table border=1>";
 
 		auto *files = load_filelist(snapshot_dir, "");
 
-		if (!pars || strcmp(pars, "last-change") == 0)
+		auto order_it = pars.find("order");
+		std::string order;
+
+		if (order_it != pars.end())
+			order = order_it -> second;
+
+		if (order == "" || order == "last-change")
 			std::sort(files -> begin(), files -> end(), sort_files_last_change);
-		else if (strcmp(pars, "name") == 0)
+		else if (order == "name")
 			std::sort(files -> begin(), files -> end(), sort_files_name);
-		else if (strcmp(pars, "size") == 0)
+		else if (order == "size")
 			std::sort(files -> begin(), files -> end(), sort_files_size);
 		else
-			reply += myformat("Ignoring unknown sort method %s", pars);
+			reply += myformat("Ignoring unknown sort method %s", order.c_str());
 
-		reply += "<tr><th><a href=\"?name\">name</a></th><th><a href=\"?last-change\">last change</a></th><th><a href=\"?size\">size</a></th></tr>";
+		reply += "<tr><th><a href=\"?order=name\">name</a></th><th><a href=\"?order=last-change\">last change</a></th><th><a href=\"?order=size\">size</a></th><th></th></tr>";
 
-		for(auto file : *files)
-			reply += std::string("<tr><td><a href=\"send-file?") + file.name + "\">" + file.name + "</a></td><td>" + myctime(file.last_change) + "</td><td>" + myformat("%zu", file.size) + "</td>";
+		for(auto file : *files) {
+			reply += std::string("<tr><td><a href=\"send-file?download&file=") + file.name + "\">" + file.name + "</a></td><td>" + myctime(file.last_change) + "</td><td>" + myformat("%zu", file.size) + "</td><td>" + myformat("<a href=\"view-file?file=%s\">view</a>", file.name.c_str()) + "</td></tr>";
+		}
 
 		delete files;
 
@@ -1237,7 +1296,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	else if (strncmp(path, "favicon.ico", 11) == 0) {
 		struct stat st;
 		if (stat("favicon.ico", &st) == 0)
-			send_file(cfd, "./", "favicon.ico");
+			send_file(cfd, "./", "favicon.ico", false);
 		else {
 			std::string reply = http_200_header + "\r\n";
 
@@ -1251,8 +1310,14 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	else if (strcmp(path, "pause") == 0 || strcmp(path, "unpause") == 0) {
 		std::string reply = http_200_header + "???";
 
+		auto mod_it = pars.find("module");
+		std::string module;
+
+		if (mod_it != pars.end())
+			module = mod_it -> second;
+
 		cfg -> lock.lock();
-		if (pause(inst, pars ? pars : "", strcmp(path, "pause") == 0))
+		if (pause(inst, module, strcmp(path, "pause") == 0))
 			reply = http_200_header + page_header + myformat(action_succeeded.c_str(), "pause/unpause") + html_tail;
 		else
 			reply = http_200_header + page_header + myformat(action_failed.c_str(), "pause/unpause") + html_tail;
@@ -1264,10 +1329,19 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	else if (strcmp(path, "start") == 0 || strcmp(path, "stop") == 0) {
 		std::string reply = http_200_header + "???";
 
-		cfg -> lock.lock();
-		interface *i = find_by_id(inst, pars);
+		auto mod_it = pars.find("module");
+		std::string module;
 
-		if (start_stop(i, strcmp(path, "start") == 0))
+		if (mod_it != pars.end())
+			module = mod_it -> second;
+
+		cfg -> lock.lock();
+		interface *i = find_by_id(inst, module);
+		printf("inst %s: %p\n", module.c_str(), i);
+
+		if (!i)
+			reply = "???";
+		else if (start_stop(i, strcmp(path, "start") == 0))
 			reply = http_200_header + page_header + myformat(action_succeeded.c_str(), "start/stop") + html_tail;
 		else
 			reply = http_200_header + page_header + myformat(action_failed.c_str(), "start/stop") + html_tail;
@@ -1279,10 +1353,18 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	else if (strcmp(path, "restart") == 0) {
 		std::string reply = http_200_header + "???";
 
-		cfg -> lock.lock();
-		interface *i = find_by_id(inst, pars);
+		auto mod_it = pars.find("module");
+		std::string module;
 
-		if (start_stop(i, false)) {
+		if (mod_it != pars.end())
+			module = mod_it -> second;
+
+		cfg -> lock.lock();
+		interface *i = find_by_id(inst, module);
+
+		if (!i)
+			reply = "???";
+		else if (start_stop(i, false)) {
 			if (start_stop(i, true))
 				reply = http_200_header + page_header + myformat(action_succeeded.c_str(), "restart") + html_tail;
 			else
@@ -1306,24 +1388,25 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	}
 	else if (strcmp(path, "snapshot-video/") == 0) {
 		interface *i = start_a_video(s, snapshot_dir, quality);
+		printf("interface %p instance %p\n", i, inst);
 
 		std::string reply = http_200_header + "???";
 		if (i) {
-			reply = http_200_header + page_header + myformat(action_succeeded.c_str(), "snapshot image") + html_tail;
+			reply = http_200_header + page_header + myformat(action_succeeded.c_str(), "snapshot video") + html_tail;
 
 			cfg -> lock.lock();
 			inst -> interfaces.push_back(i);
 			cfg -> lock.unlock();
 		}
 		else {
-			reply = http_200_header + page_header + myformat(action_failed.c_str(), "snapshot image") + html_tail;
+			reply = http_200_header + page_header + myformat(action_failed.c_str(), "snapshot video") + html_tail;
 		}
 
 		if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
 			log(LL_DEBUG, "short write on response header");
 	}
 	else {
-	do404:
+do404:
 		log(LL_INFO, "Path %s not found", path);
 
 		if (WRITE(cfd, "HTTP/1.0 404\r\n\r\nwhat?", 4) <= 0)
@@ -1331,110 +1414,109 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	}
 
 	free(Path);
-	free(pars);
 
 	close(cfd);
 
 	if (s)
 		s -> unregister_user();
-}
-
-void * handle_http_client_thread(void *ct_in)
-{
-	http_thread_t *ct = (http_thread_t *)ct_in;
-
-	set_thread_name("http_client");
-
-	if (ct -> is_rest) {
-		handle_rest(ct -> fd, ct -> cfg, ct -> global_stopflag, ct -> snapshot_dir, ct -> quality);
-	}
-	else {
-		handle_http_client(ct -> fd, ct -> fps, ct -> quality, ct -> time_limit, ct -> filters, ct -> global_stopflag, ct -> r, ct -> resize_w, ct -> resize_h, ct -> motion_compatible, ct -> inst, ct -> snapshot_dir, ct -> allow_admin, ct -> archive_acces, ct -> cfg);
 	}
 
-	delete ct;
+	void * handle_http_client_thread(void *ct_in)
+	{
+		http_thread_t *ct = (http_thread_t *)ct_in;
 
-	return NULL;
-}
+		set_thread_name("http_client");
 
-http_server::http_server(configuration_t *const cfg, const std::string & id, instance_t *const inst, const std::string & http_adapter, const int http_port, const double fps, const int quality, const int time_limit, const std::vector<filter *> *const f, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, const bool allow_admin, const bool archive_acces, const std::string & snapshot_dir, const bool is_rest) : cfg(cfg), interface(id), inst(inst), fps(fps), quality(quality), time_limit(time_limit), f(f), r(r), resize_w(resize_w), resize_h(resize_h), motion_compatible(motion_compatible), allow_admin(allow_admin), archive_acces(archive_acces), snapshot_dir(snapshot_dir), is_rest(is_rest)
-{
-	fd = start_listen(http_adapter.c_str(), http_port, 5);
-	ct = CT_HTTPSERVER;
-
-	d = myformat("[%s]:%d", http_adapter.c_str(), http_port);
-}
-
-http_server::~http_server()
-{
-	close(fd);
-
-	free_filters(f);
-
-	delete f;
-}
-
-void http_server::operator()()
-{
-	set_thread_name("http_server");
-
-	struct pollfd fds[] = { { fd, POLLIN, 0 } };
-
-	std::vector<pthread_t> handles;
-
-	for(;!local_stop_flag;) {
-		for(size_t i=0; i<handles.size();) {
-			if (pthread_tryjoin_np(handles.at(i), NULL) == 0)
-				handles.erase(handles.begin() + i);
-			else
-				i++;
+		if (ct -> is_rest) {
+			handle_rest(ct -> fd, ct -> cfg, ct -> global_stopflag, ct -> snapshot_dir, ct -> quality);
+		}
+		else {
+			handle_http_client(ct -> fd, ct -> fps, ct -> quality, ct -> time_limit, ct -> filters, ct -> global_stopflag, ct -> r, ct -> resize_w, ct -> resize_h, ct -> motion_compatible, ct -> inst, ct -> snapshot_dir, ct -> allow_admin, ct -> archive_acces, ct -> cfg);
 		}
 
-		get_meta() -> set_int("$http-viewers$", std::pair<uint64_t, int>(0, handles.size()));
+		delete ct;
 
-		pauseCheck();
-
-		if (poll(fds, 1, 500) == 0)
-			continue;
-
-		int cfd = accept(fd, NULL, 0);
-		if (cfd == -1)
-			continue;
-
-		log(LL_INFO, "HTTP connected with: %s", get_endpoint_name(cfd).c_str());
-
-		http_thread_t *ct = new http_thread_t;
-
-		ct -> inst = inst;
-		ct -> fd = cfd;
-		ct -> fps = fps;
-		ct -> quality = quality;
-		ct -> time_limit = time_limit;
-		ct -> filters = f;
-		ct -> global_stopflag = &local_stop_flag;
-		ct -> r = r;
-		ct -> resize_w = resize_w;
-		ct -> resize_h = resize_h;
-		ct -> motion_compatible = motion_compatible;
-		ct -> cfg = cfg;
-		ct -> snapshot_dir = snapshot_dir;
-		ct -> allow_admin = allow_admin;
-		ct -> archive_acces = archive_acces;
-		ct -> is_rest = is_rest;
-
-		pthread_t th;
-		int rc = -1;
-		if ((rc = pthread_create(&th, NULL, handle_http_client_thread, ct)) != 0)
-		{
-			errno = rc;
-			error_exit(true, "pthread_create failed (http server)");
-		}
-
-		handles.push_back(th);
+		return NULL;
 	}
 
-	for(size_t i=0; i<handles.size(); i++)
-		pthread_join(handles.at(i), NULL);
+	http_server::http_server(configuration_t *const cfg, const std::string & id, instance_t *const inst, const std::string & http_adapter, const int http_port, const double fps, const int quality, const int time_limit, const std::vector<filter *> *const f, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, const bool allow_admin, const bool archive_acces, const std::string & snapshot_dir, const bool is_rest) : cfg(cfg), interface(id), inst(inst), fps(fps), quality(quality), time_limit(time_limit), f(f), r(r), resize_w(resize_w), resize_h(resize_h), motion_compatible(motion_compatible), allow_admin(allow_admin), archive_acces(archive_acces), snapshot_dir(snapshot_dir), is_rest(is_rest)
+	{
+		fd = start_listen(http_adapter.c_str(), http_port, 5);
+		ct = CT_HTTPSERVER;
 
-	log(LL_INFO, "HTTP server thread terminating");
-}
+		d = myformat("[%s]:%d", http_adapter.c_str(), http_port);
+	}
+
+	http_server::~http_server()
+	{
+		close(fd);
+
+		free_filters(f);
+
+		delete f;
+	}
+
+	void http_server::operator()()
+	{
+		set_thread_name("http_server");
+
+		struct pollfd fds[] = { { fd, POLLIN, 0 } };
+
+		std::vector<pthread_t> handles;
+
+		for(;!local_stop_flag;) {
+			for(size_t i=0; i<handles.size();) {
+				if (pthread_tryjoin_np(handles.at(i), NULL) == 0)
+					handles.erase(handles.begin() + i);
+				else
+					i++;
+			}
+
+			get_meta() -> set_int("$http-viewers$", std::pair<uint64_t, int>(0, handles.size()));
+
+			pauseCheck();
+
+			if (poll(fds, 1, 500) == 0)
+				continue;
+
+			int cfd = accept(fd, NULL, 0);
+			if (cfd == -1)
+				continue;
+
+			log(LL_INFO, "HTTP connected with: %s", get_endpoint_name(cfd).c_str());
+
+			http_thread_t *ct = new http_thread_t;
+
+			ct -> inst = inst;
+			ct -> fd = cfd;
+			ct -> fps = fps;
+			ct -> quality = quality;
+			ct -> time_limit = time_limit;
+			ct -> filters = f;
+			ct -> global_stopflag = &local_stop_flag;
+			ct -> r = r;
+			ct -> resize_w = resize_w;
+			ct -> resize_h = resize_h;
+			ct -> motion_compatible = motion_compatible;
+			ct -> cfg = cfg;
+			ct -> snapshot_dir = snapshot_dir;
+			ct -> allow_admin = allow_admin;
+			ct -> archive_acces = archive_acces;
+			ct -> is_rest = is_rest;
+
+			pthread_t th;
+			int rc = -1;
+			if ((rc = pthread_create(&th, NULL, handle_http_client_thread, ct)) != 0)
+			{
+				errno = rc;
+				error_exit(true, "pthread_create failed (http server)");
+			}
+
+			handles.push_back(th);
+		}
+
+		for(size_t i=0; i<handles.size(); i++)
+			pthread_join(handles.at(i), NULL);
+
+		log(LL_INFO, "HTTP server thread terminating");
+	}
