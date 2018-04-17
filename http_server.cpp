@@ -1213,11 +1213,12 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 			reply += html_tail; 
 		}
 		else {
-			reply = http_200_header + page_header + "<div id=\"main\">"
+			reply = http_200_header + page_header + "<div class=\"vidmain\">"
 				"<ul><li><a href=\"view-all.html\">view all, live video</a><br><br>";
 
+			reply += "<li>static frames:<br>";
 			for(instance_t * inst : cfg -> instances)
-				reply += myformat("<li><a href=\"index.html?inst=%lx\">%s<br><img src=\"image.jpg?inst=%lx\" width=320 height=240></a>", hash(inst -> name), inst -> name.c_str(), hash(inst -> name));
+				reply += myformat("<div class=\"vid\"><p><a href=\"index.html?inst=%lx\">%s</p><img src=\"image.jpg?inst=%lx\" width=320 height=240></a></div>", hash(inst -> name), inst -> name.c_str(), hash(inst -> name));
 
 			reply += "</ul></div>";
 		}
