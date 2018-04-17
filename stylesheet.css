@@ -28,3 +28,11 @@ hr {
     color: #000011;
     border-color: inherit
 }
+.vidmain {
+    overflow: hidden;
+}
+.vid {
+    width : 340px;
+    height : 280px;
+    float : left;
+    }

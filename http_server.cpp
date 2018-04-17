@@ -1168,7 +1168,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 			std::string reply = http_200_header + "\r\n";
 
 			if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
-				log(LL_DEBUG, "short write on response header");
+				log(LL_DEBUG, "short write on response");
 		}
 	}
 	else if (strcmp(path, "stream.html") == 0)
@@ -1227,7 +1227,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	}
 	else if (strcmp(path, "view-all.html") == 0)
 	{
-		std::string reply = http_200_header + page_header + "<div id=\"main\">";
+		std::string reply = http_200_header + page_header + "<div class=\"vidmain\">";
 
 		for(instance_t * inst : cfg -> instances) {
 			source *const s = find_source(inst);
@@ -1235,7 +1235,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 			int w = s -> get_width();
 			int use_h = s -> get_height() * (320.0 / w);
 
-			reply += myformat("<div id=\"vid\"><a href=\"index.html?inst=%lx\">%s<br><img src=\"stream.mjpeg?inst=%lx\" width=320 height=%d></a></div>", hash(inst -> name), inst -> name.c_str(), hash(inst -> name), use_h);
+			reply += myformat("<div class=\"vid\"><p><a href=\"index.html?inst=%lx\">%s</p><img src=\"stream.mjpeg?inst=%lx\" width=320 height=%d></a></div>", hash(inst -> name), inst -> name.c_str(), hash(inst -> name), use_h);
 		}
 
 		reply += "</div>";
