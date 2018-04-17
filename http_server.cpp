@@ -1147,8 +1147,8 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 
 	const std::string cur_hash = inst ? myformat("?inst=%lx", hash(inst -> name)) : "";
 
-	if (inst)
-	printf("%s\n", inst -> name.c_str());
+	//if (inst)
+	//printf("%s\n", inst -> name.c_str());
 
 	const std::string page_header = myformat(html_header.c_str(), inst ? inst -> name.c_str() : "(everything)");
 
@@ -1214,16 +1214,34 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 		}
 		else {
 			reply = http_200_header + page_header + "<div id=\"main\">"
-				"<ul>";
+				"<ul><li><a href=\"view-all.html\">view all, live video</a><br><br>";
 
 			for(instance_t * inst : cfg -> instances)
-				reply += myformat("<li><a href=\"index.html?inst=%lx\">%s</a>", hash(inst -> name), inst -> name.c_str());
+				reply += myformat("<li><a href=\"index.html?inst=%lx\">%s<br><img src=\"image.jpg?inst=%lx\" width=320 height=240></a>", hash(inst -> name), inst -> name.c_str(), hash(inst -> name));
 
 			reply += "</ul></div>";
 		}
 
 		if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
 			log(LL_DEBUG, "short write on response header");
+	}
+	else if (strcmp(path, "view-all.html") == 0)
+	{
+		std::string reply = http_200_header + page_header + "<div id=\"main\">";
+
+		for(instance_t * inst : cfg -> instances) {
+			source *const s = find_source(inst);
+
+			int w = s -> get_width();
+			int use_h = s -> get_height() * (320.0 / w);
+
+			reply += myformat("<div id=\"vid\"><a href=\"index.html?inst=%lx\">%s<br><img src=\"stream.mjpeg?inst=%lx\" width=320 height=%d></a></div>", hash(inst -> name), inst -> name.c_str(), hash(inst -> name), use_h);
+		}
+
+		reply += "</div>";
+
+		if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
+			log(LL_DEBUG, "short write on response");
 	}
 	else if ((strncmp(path, "view-snapshots/send-file", 24) == 0 || strncmp(path, "send-file", 9) == 0) && (archive_acces || allow_admin)) {
 		auto file_it = pars.find("file");
@@ -1337,7 +1355,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 
 		cfg -> lock.lock();
 		interface *i = find_by_id(inst, module);
-		printf("inst %s: %p\n", module.c_str(), i);
+		//printf("inst %s: %p\n", module.c_str(), i);
 
 		if (!i)
 			reply = "???";
@@ -1388,7 +1406,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	}
 	else if (strcmp(path, "snapshot-video/") == 0) {
 		interface *i = start_a_video(s, snapshot_dir, quality);
-		printf("interface %p instance %p\n", i, inst);
+		//printf("interface %p instance %p\n", i, inst);
 
 		std::string reply = http_200_header + "???";
 		if (i) {
