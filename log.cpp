@@ -22,9 +22,6 @@ void setlogfile(const char *const file, const int ll)
 
 void _log(const int ll, const char *const what, va_list args)
 {
-	if (!logfile)
-		return;
-
 	if (ll > loglevel)
 		return;
 
@@ -69,12 +66,14 @@ void _log(const int ll, const char *const what, va_list args)
 			msg);
 	free(msg);
 
-	FILE *fh = fopen(logfile, "a+");
-	if (!fh)
-		error_exit(true, "Cannot access logfile '%s'", logfile);
+	if (logfile) {
+		FILE *fh = fopen(logfile, "a+");
+		if (!fh)
+			error_exit(true, "Cannot access logfile '%s'", logfile);
 
-	fprintf(fh, "%s\n", temp);
-	fclose(fh);
+		fprintf(fh, "%s\n", temp);
+		fclose(fh);
+	}
 
 	printf("%s\n", temp);
 	free(temp);
