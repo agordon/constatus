@@ -19,10 +19,12 @@ extern "C" {
 
 static bool v = false;
 
-source_rtsp::source_rtsp(const std::string & id, const std::string & url, const bool tcp, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout) : source(id, max_fps, r, resize_w, resize_h, loglevel, timeout), url(url), tcp(tcp)
+source_rtsp::source_rtsp(const std::string & id, const std::string & descr, const std::string & url, const bool tcp, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout) : source(id, descr, max_fps, r, resize_w, resize_h, loglevel, timeout), url(url), tcp(tcp)
 {
 	v = loglevel >= LL_DEBUG;
-	d = url;
+
+	if (this -> descr == "")
+		this -> descr = url;
 }
 
 source_rtsp::~source_rtsp()

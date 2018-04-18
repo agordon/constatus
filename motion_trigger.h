@@ -75,7 +75,7 @@ private:
 	std::vector<settable_parameter_t> rest_parameters;
 
 public:
-	motion_trigger(const std::string & id, source *const s, const int noise_level, const double percentage_pixels_changed, const int keep_recording_n_frames, const int ignore_n_frames_after_recording, const int camera_warm_up, const int pre_record_count, const std::vector<filter *> *const before, std::vector<target *> *const targets, selection_mask *const pixel_select_bitmap, ext_trigger_t *const et, const double max_fps, const std::string & exec_start, const std::string & exec_end);
+	motion_trigger(const std::string & id, const std::string & descr, source *const s, const int noise_level, const double percentage_pixels_changed, const int keep_recording_n_frames, const int ignore_n_frames_after_recording, const int camera_warm_up, const int pre_record_count, const std::vector<filter *> *const before, std::vector<target *> *const targets, selection_mask *const pixel_select_bitmap, ext_trigger_t *const et, const double max_fps, const std::string & exec_start, const std::string & exec_end);
 	virtual ~motion_trigger();
 
 	json_t * get_rest_settable_parameters();

@@ -12,7 +12,7 @@
 #include "log.h"
 #include "filter_add_text.h"
 
-source::source(const std::string & id, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout) : interface(id), max_fps(max_fps), r(r), resize_w(resize_w), resize_h(resize_h), loglevel(loglevel), timeout(timeout)
+source::source(const std::string & id, const std::string & descr, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout) : interface(id, descr), max_fps(max_fps), r(r), resize_w(resize_w), resize_h(resize_h), loglevel(loglevel), timeout(timeout)
 {
 	width = height = -1;
 	ts = 0;

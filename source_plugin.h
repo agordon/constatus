@@ -16,7 +16,7 @@ private:
 	void *arg, *library;
 
 public:
-	source_plugin(const std::string & id, const std::string & plugin_filename, const std::string & plugin_arg, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout);
+	source_plugin(const std::string & id, const std::string & descr, const std::string & plugin_filename, const std::string & plugin_arg, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout);
 	~source_plugin();
 
 	void operator()();

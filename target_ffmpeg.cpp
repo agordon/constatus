@@ -15,16 +15,18 @@ extern "C" {
 #include "picio.h"
 #include "utils.h"
 
-target_ffmpeg::target_ffmpeg(const std::string & id, const std::string & parameters, source *const s, const std::string & store_path, const std::string & prefix, const int max_time, const double interval, const std::string & type, const int bitrate, const std::vector<filter *> *const filters, const std::string & exec_start, const std::string & exec_cycle, const std::string & exec_end, const int override_fps) : target(id, s, store_path, prefix, max_time, interval, filters, exec_start, exec_cycle, exec_end, override_fps), parameters(parameters), type(type), bitrate(bitrate)
+target_ffmpeg::target_ffmpeg(const std::string & id, const std::string & descr, const std::string & parameters, source *const s, const std::string & store_path, const std::string & prefix, const int max_time, const double interval, const std::string & type, const int bitrate, const std::vector<filter *> *const filters, const std::string & exec_start, const std::string & exec_cycle, const std::string & exec_end, const int override_fps) : target(id, descr, s, store_path, prefix, max_time, interval, filters, exec_start, exec_cycle, exec_end, override_fps), parameters(parameters), type(type), bitrate(bitrate)
 {
 	avcodec_register_all();
+
+	if (this -> descr == "")
+		this -> descr = store_path + "/" + prefix;
 }
 
 target_ffmpeg::~target_ffmpeg()
 {
 	stop();
 }
-
 
 static const std::string my_av_err2str(const int nr)
 {

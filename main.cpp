@@ -341,7 +341,8 @@ target * load_target(const Setting & in, source *const s, resize *const r)
 {
 	target *t = NULL;
 
-	std::string id = cfg_str(in, "id", "some identifier; visible in e.g. the http server", true, "");
+	const std::string id = cfg_str(in, "id", "some identifier: used for selecting this module", true, "");
+	const std::string descr = cfg_str(in, "descr", "description: visible in e.g. the http server", true, "");
 
 	std::string path = cfg_str(in, "path", "directory to write to", false, "");
 	std::string prefix = cfg_str(in, "prefix", "string to begin filename with", true, "");
@@ -375,34 +376,34 @@ target * load_target(const Setting & in, source *const s, resize *const r)
 
 	if (format == "avi")
 #ifdef WITH_GWAVI
-		t = new target_avi(id, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, override_fps);
+		t = new target_avi(id, descr, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, override_fps);
 #else
 		error_exit(false, "libgwavi not compiled in");
 #endif
 	else if (format == "extpipe") {
 		std::string cmd = cfg_str(in, "cmd", "Command to send the frames to", false, "");
 
-		t = new target_extpipe(id, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, cmd);
+		t = new target_extpipe(id, descr, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, cmd);
 	}
 	else if (format == "ffmpeg") {
 		int bitrate = cfg_int(in, "bitrate", "How many bits per second to emit. For 352x288 200000 is a sane value. This value affects the quality.", true, 200000);
 		std::string type = cfg_str(in, "ffmpeg-type", "E.g. flv, mp4", true, "mp4");
 		std::string const parameters = cfg_str(in, "ffmpeg-parameters", "Parameters specific for ffmpeg.", true, "");
 
-		t = new target_ffmpeg(id, parameters, s, path, prefix, restart_interval, interval, type, bitrate, filters, exec_start, exec_cycle, exec_end, override_fps);
+		t = new target_ffmpeg(id, descr, parameters, s, path, prefix, restart_interval, interval, type, bitrate, filters, exec_start, exec_cycle, exec_end, override_fps);
 	}
 	else if (format == "jpeg")
-		t = new target_jpeg(id, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end);
+		t = new target_jpeg(id, descr, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end);
 	else if (format == "plugin") {
 		stream_plugin_t *sp = load_stream_plugin(in);
 
-		t = new target_plugin(id, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, sp, override_fps);
+		t = new target_plugin(id, descr, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, sp, override_fps);
 	}
 	else if (format == "vnc") {
 		std::string listen_adapter = cfg_str(in, "listen-adapter", "network interface to listen on or 0.0.0.0 for all", false, "");
 		int listen_port = cfg_int(in, "listen-port", "port to listen on", false, 5901);
 
-		t = new target_vnc(id, s, listen_adapter, listen_port, restart_interval, interval, filters, exec_start, exec_end);
+		t = new target_vnc(id, descr, s, listen_adapter, listen_port, restart_interval, interval, filters, exec_start, exec_end);
 	}
 	else {
 		error_exit(false, "Format %s is unknown (stream to disk backends)", format.c_str());
@@ -423,7 +424,8 @@ void load_http_servers(configuration_t *const cfg, instance_t *const ci, const S
 	for(size_t i=0; i<n_hl; i++) {
 		const Setting &server = hs[i];
 
-		const std::string id = cfg_str(server, "id", "some identifier; visible in e.g. the http server", true, "");
+		const std::string id = cfg_str(server, "id", "some identifier: used for selecting this module", true, "");
+		const std::string descr = cfg_str(server, "descr", "description: visible in e.g. the http server", true, "");
 
 		std::string listen_adapter = cfg_str(server, "listen-adapter", "network interface to listen on or 0.0.0.0 for all", false, "");
 		int listen_port = cfg_int(server, "listen-port", "port to listen on", false, 8080);
@@ -456,7 +458,7 @@ void load_http_servers(configuration_t *const cfg, instance_t *const ci, const S
 
 		instance_t *look_at = local_instance ? ci : NULL;
 
-		interface *h = new http_server(cfg, id, look_at, listen_adapter, listen_port, fps, jpeg_quality, time_limit, http_filters, r, resize_w, resize_h, motion_compatible, allow_admin, archive_access, snapshot_dir, is_rest);
+		interface *h = new http_server(cfg, id, descr, look_at, listen_adapter, listen_port, fps, jpeg_quality, time_limit, http_filters, r, resize_w, resize_h, motion_compatible, allow_admin, archive_access, snapshot_dir, is_rest);
 		ci -> interfaces.push_back(h);
 	}
 }
@@ -622,7 +624,8 @@ int main(int argc, char *argv[])
 		{
 			log(LL_INFO, "Configuring the video-source...");
 			const std::string s_type = cfg_str(o_source, "type", "source-type", false, "");
-			const std::string id = cfg_str(o_source, "id", "some identifier; visible in e.g. the http server", true, "");
+			const std::string id = cfg_str(o_source, "id", "some identifier: used for selecting this module", true, "");
+			const std::string descr = cfg_str(o_source, "descr", "description: visible in e.g. the http server", true, "");
 
 			double max_fps = cfg_float(o_source, "max-fps", "limit the number of frames per second acquired to this value or -1.0 to disable", true, -1.0);
 			if (max_fps == 0)
@@ -641,32 +644,32 @@ int main(int argc, char *argv[])
 				int jpeg_quality = cfg_int(o_source, "quality", "JPEG quality, this influences the size", true, 75);
 				std::string dev = cfg_str(o_source, "device", "linux v4l2 device", false, "/dev/video0");
 
-				s = new source_v4l(id, dev, pref_jpeg, rpi_wa, jpeg_quality, max_fps, w, h, r, resize_w, resize_h, loglevel, timeout);
+				s = new source_v4l(id, descr, dev, pref_jpeg, rpi_wa, jpeg_quality, max_fps, w, h, r, resize_w, resize_h, loglevel, timeout);
 			}
 			else if (s_type == "jpeg") {
 				bool ign_cert = cfg_bool(o_source, "ignore-cert", "ignore SSL errors", true, false);
 				const std::string auth = cfg_str(o_source, "http-auth", "HTTP authentication string", true, "");
 				const std::string url = cfg_str(o_source, "url", "address of JPEG stream", false, "");
 
-				s = new source_http_jpeg(id, url, ign_cert, auth, max_fps, r, resize_w, resize_h, loglevel, timeout);
+				s = new source_http_jpeg(id, descr, url, ign_cert, auth, max_fps, r, resize_w, resize_h, loglevel, timeout);
 			}
 			else if (s_type == "mjpeg") {
 				const std::string url = cfg_str(o_source, "url", "address of MJPEG stream", false, "");
 				bool ign_cert = cfg_bool(o_source, "ignore-cert", "ignore SSL errors", true, false);
 
-				s = new source_http_mjpeg(id, url, ign_cert, max_fps, r, resize_w, resize_h, loglevel, timeout);
+				s = new source_http_mjpeg(id, descr, url, ign_cert, max_fps, r, resize_w, resize_h, loglevel, timeout);
 			}
 			else if (s_type == "rtsp") {
 				const std::string url = cfg_str(o_source, "url", "address of JPEG stream", false, "");
 				bool tcp = cfg_bool(o_source, "tcp", "use TCP for RTSP transport (instead of default UDP)", true, false);
 
-				s = new source_rtsp(id, url, tcp, max_fps, r, resize_w, resize_h, loglevel, timeout);
+				s = new source_rtsp(id, descr, url, tcp, max_fps, r, resize_w, resize_h, loglevel, timeout);
 			}
 			else if (s_type == "plugin") {
 				std::string plugin_bin = cfg_str(o_source, "source-plugin-file", "filename of video data source plugin", true, "");
 				std::string plugin_arg = cfg_str(o_source, "source-plugin-parameter", "parameter for video data source plugin", true, "");
 
-				s = new source_plugin(id, plugin_bin, plugin_arg, max_fps, r, resize_w, resize_h, loglevel, timeout);
+				s = new source_plugin(id, descr, plugin_bin, plugin_arg, max_fps, r, resize_w, resize_h, loglevel, timeout);
 			}
 			else {
 				log(LL_FATAL, " no source defined!");
@@ -721,7 +724,8 @@ int main(int argc, char *argv[])
 		{
 			const Setting &o_vlb = instance_root["video-loopback"];
 
-			const std::string id = cfg_str(o_vlb, "id", "some identifier; visible in e.g. the http server", true, "");
+			const std::string id = cfg_str(o_source, "id", "some identifier: used for selecting this module", true, "");
+			const std::string descr = cfg_str(o_source, "descr", "description: visible in e.g. the http server", true, "");
 
 			std::string dev = cfg_str(o_vlb, "device", "Linux v4l2 device to connect to", true, "");
 
@@ -737,7 +741,7 @@ int main(int argc, char *argv[])
 			catch(SettingNotFoundException & snfe) {
 			}
 
-			interface *f = new v4l2_loopback(id, s, fps, dev, filters);
+			interface *f = new v4l2_loopback(id, descr, s, fps, dev, filters);
 			ci -> interfaces.push_back(f);
 		}
 		catch(const SettingNotFoundException &nfex) {
@@ -760,7 +764,8 @@ int main(int argc, char *argv[])
 			for(size_t i=0; i<n_vlb; i++) {
 				const Setting &trigger = o_mt[i];
 
-				const std::string id = cfg_str(trigger, "id", "some identifier; visible in e.g. the http server", true, "");
+				const std::string id = cfg_str(o_source, "id", "some identifier: used for selecting this module", true, "");
+				const std::string descr = cfg_str(o_source, "descr", "description: visible in e.g. the http server", true, "");
 
 				int noise_level = cfg_int(trigger, "noise-factor", "at what difference levell is the pixel considered to be changed", true, 32);
 				double pixels_changed_perctange = cfg_float(trigger, "pixels-changed-percentage", "what %% of pixels need to be changed before the motion trigger is triggered", true, 1.0);
@@ -823,7 +828,7 @@ int main(int argc, char *argv[])
 				std::string exec_start = cfg_str(trigger, "exec-start", "script to start when recording starts", true, "");
 				std::string exec_end = cfg_str(trigger, "exec-end", "script to start when the recording stops", true, "");
 
-				interface *m = new motion_trigger(id, s, noise_level, pixels_changed_perctange, min_duration, mute_duration, warmup_duration, pre_motion_record_duration, filters_detection, motion_targets, sm, et, max_fps, exec_start, exec_end);
+				interface *m = new motion_trigger(id, descr, s, noise_level, pixels_changed_perctange, min_duration, mute_duration, warmup_duration, pre_motion_record_duration, filters_detection, motion_targets, sm, et, max_fps, exec_start, exec_end);
 				ci -> interfaces.push_back(m);
 			}
 		}
@@ -870,10 +875,10 @@ int main(int argc, char *argv[])
 	std::set<std::string> check_id;
 	for(instance_t * inst : cfg.instances) {
 		for(const interface *const i: inst -> interfaces) {
-			std::string cur = i -> gen_id();
+			std::string cur = i -> get_id();
 
 			if (check_id.find(cur) != check_id.end())
-				log(LL_WARNING, "There are multiple modules with the same ID (%s): this will give problems when trying to use the REST interface!", i -> get_id_str().c_str());
+				log(LL_WARNING, "There are multiple modules with the same ID (%s): this will give problems when trying to use the REST interface!", cur.c_str());
 			else
 				check_id.insert(cur);
 		}

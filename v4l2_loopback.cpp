@@ -21,11 +21,14 @@
 #include "log.h"
 #include "v4l2_loopback.h"
 
-v4l2_loopback::v4l2_loopback(const std::string & id, source *const s, const double fps, const std::string & dev, const std::vector<filter *> *const filters) : interface(id), s(s), fps(fps), dev(dev), filters(filters)
+v4l2_loopback::v4l2_loopback(const std::string & id, const std::string & descr, source *const s, const double fps, const std::string & dev, const std::vector<filter *> *const filters) : interface(id, descr), s(s), fps(fps), dev(dev), filters(filters)
 {
 	th = NULL;
 	local_stop_flag = false;
 	ct = CT_LOOPBACK;
+
+	if (this -> descr == "")
+		this -> descr = dev;
 }
 
 v4l2_loopback::~v4l2_loopback()

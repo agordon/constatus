@@ -12,7 +12,7 @@ private:
 	const bool ignore_cert;
 
 public:
-	source_http_jpeg(const std::string & id, const std::string & url, const bool ignore_cert, const std::string & auth, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout);
+	source_http_jpeg(const std::string & id, const std::string & descr, const std::string & url, const bool ignore_cert, const std::string & auth, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout);
 	~source_http_jpeg();
 
 	void operator()();

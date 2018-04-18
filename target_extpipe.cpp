@@ -11,8 +11,10 @@
 #include "picio.h"
 #include "utils.h"
 
-target_extpipe::target_extpipe(const std::string & id, source *const s, const std::string & store_path, const std::string & prefix, const int quality, const int max_time, const double interval, const std::vector<filter *> *const filters, const std::string & exec_start, const std::string & exec_cycle, const std::string & exec_end, const std::string & cmd) : target(id, s, store_path, prefix, max_time, interval, filters, exec_start, exec_cycle, exec_end, -1.0), quality(quality), cmd(cmd)
+target_extpipe::target_extpipe(const std::string & id, const std::string & descr, source *const s, const std::string & store_path, const std::string & prefix, const int quality, const int max_time, const double interval, const std::vector<filter *> *const filters, const std::string & exec_start, const std::string & exec_cycle, const std::string & exec_end, const std::string & cmd) : target(id, descr, s, store_path, prefix, max_time, interval, filters, exec_start, exec_cycle, exec_end, -1.0), quality(quality), cmd(cmd)
 {
+	if (this -> descr == "")
+		this -> descr = store_path + "/" + prefix;
 }
 
 target_extpipe::~target_extpipe()

@@ -157,13 +157,14 @@ bool source_v4l::try_v4l_configuration(int fd, int *width, int *height, unsigned
 	return true;
 }
 
-source_v4l::source_v4l(const std::string & id, const std::string & dev, const bool prefer_jpeg_in, const bool rpi_workaround_in, const int jpeg_quality, const double max_fps, const int w_override, const int h_override, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout) : source(id, max_fps, r, resize_w, resize_h, loglevel, timeout), prefer_jpeg(prefer_jpeg_in), rpi_workaround(rpi_workaround_in)
+source_v4l::source_v4l(const std::string & id, const std::string & descr, const std::string & dev, const bool prefer_jpeg_in, const bool rpi_workaround_in, const int jpeg_quality, const double max_fps, const int w_override, const int h_override, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout) : source(id, descr, max_fps, r, resize_w, resize_h, loglevel, timeout), prefer_jpeg(prefer_jpeg_in), rpi_workaround(rpi_workaround_in)
 {
 	fd = open(dev.c_str(), O_RDWR);
 	if (fd == -1)
 		error_exit(true, "Cannot access video4linux device '%s'", dev.c_str());
 
-	d = dev;
+	if (this -> descr == "")
+		this -> descr = dev;
 
 	// verify that it is a capture device
 	struct v4l2_capability cap;

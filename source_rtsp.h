@@ -12,7 +12,7 @@ private:
 	const bool tcp;
 
 public:
-	source_rtsp(const std::string & id, const std::string & url, const bool tcp, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout);
+	source_rtsp(const std::string & id, const std::string & descr, const std::string & url, const bool tcp, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout);
 	~source_rtsp();
 
 	void operator()();

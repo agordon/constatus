@@ -18,19 +18,21 @@ protected:
 	std::atomic_bool local_stop_flag;
 
 	classtype_t ct;
-	std::string id, d;
+	std::string id, descr;
 
 	void pauseCheck();
 
 public:
-	interface(const std::string & id);
+	interface(const std::string & id, const std::string & descr);
 	virtual ~interface();
 
 	static meta * get_meta();
 
-	std::string gen_id() const;
-	std::string get_id_str() const;
-	std::string get_description() const { return d; }
+	std::string get_id() const { return id; }
+	std::string get_id_hash_str() const;
+	unsigned long get_id_hash_val() const;
+
+	std::string get_descr() const { return descr; }
 	classtype_t get_class_type() const { return ct; }
 
 	void start();

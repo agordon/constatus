@@ -9,7 +9,7 @@ meta * interface::get_meta()
 	return &m;
 }
 
-interface::interface(const std::string & id) : id(id)
+interface::interface(const std::string & id, const std::string & descr) : id(id), descr(descr)
 {
 	th = NULL;
 	local_stop_flag = false;
@@ -21,14 +21,14 @@ interface::~interface()
 {
 }
 
-std::string interface::gen_id() const
+unsigned long interface::get_id_hash_val() const
 {
-	return myformat("%lx", hash(id));
+	return hash(id);
 }
 
-std::string interface::get_id_str() const
+std::string interface::get_id_hash_str() const
 {
-	return id;
+	return myformat("%lx", get_id_hash_val());
 }
 
 void interface::pauseCheck()

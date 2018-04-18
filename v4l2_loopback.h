@@ -15,7 +15,7 @@ private:
 	const std::vector<filter *> *const filters;
 
 public:
-	v4l2_loopback(const std::string & id, source *const s, const double fps, const std::string & dev, const std::vector<filter *> *const filters);
+	v4l2_loopback(const std::string & id, const std::string & descr, source *const s, const double fps, const std::string & dev, const std::vector<filter *> *const filters);
 	virtual ~v4l2_loopback();
 
 	void operator()();
