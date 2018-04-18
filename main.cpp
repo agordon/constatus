@@ -864,9 +864,6 @@ int main(int argc, char *argv[])
 		if (pid_file && !do_fork)
 			log(LL_WARNING, "Will not write a PID file when not forking");
 
-		if (s)
-			ci -> interfaces.push_back(s);
-
 		cfg.instances.push_back(ci);
 	}
 
@@ -874,8 +871,11 @@ int main(int argc, char *argv[])
 
 	std::set<std::string> check_id;
 	for(instance_t * inst : cfg.instances) {
+		// printf("%s\n", inst -> name.c_str());
+
 		for(const interface *const i: inst -> interfaces) {
 			std::string cur = i -> get_id();
+			// printf("\t%s\t%s\n", cur.c_str(), i -> get_descr().c_str());
 
 			if (check_id.find(cur) != check_id.end())
 				log(LL_WARNING, "There are multiple modules with the same ID (%s): this will give problems when trying to use the REST interface!", cur.c_str());
