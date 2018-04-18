@@ -411,10 +411,60 @@ target * load_target(const Setting & in, source *const s, resize *const r)
 	return t;
 }
 
+void load_http_servers(configuration_t *const cfg, instance_t *const ci, const Setting & hs, const bool local_instance, source *const s, resize *const r)
+{
+	size_t n_hl = hs.getLength();
+
+	log(LL_DEBUG, " %zu http server(s)", n_hl);
+
+	if (n_hl == 0)
+		log(LL_WARNING, " 0 servers, is that correct?");
+
+	for(size_t i=0; i<n_hl; i++) {
+		const Setting &server = hs[i];
+
+		const std::string id = cfg_str(server, "id", "some identifier; visible in e.g. the http server", true, "");
+
+		std::string listen_adapter = cfg_str(server, "listen-adapter", "network interface to listen on or 0.0.0.0 for all", false, "");
+		int listen_port = cfg_int(server, "listen-port", "port to listen on", false, 8080);
+		log(LL_INFO, " HTTP server listening on %s:%d", listen_adapter.c_str(), listen_port);
+
+		int jpeg_quality = cfg_int(server, "quality", "JPEG quality, this influences the size", true, 75);
+		int time_limit = cfg_int(server, "time-limit", "how long (in seconds) to stream before the connection is closed", true, -1);
+
+		int resize_w = cfg_int(server, "resize-width", "resize picture width to this (-1 to disable)", true, -1);
+		int resize_h = cfg_int(server, "resize-height", "resize picture height to this (-1 to disable)", true, -1);
+
+		bool motion_compatible = cfg_bool(server, "motion-compatible", "only stream MJPEG and do not wait for HTTP request", true, false);
+		bool allow_admin = cfg_bool(server, "allow-admin", "when enabled, you can partially configure services", true, false);
+		bool is_rest = cfg_bool(server, "is-rest", "when enabled then this is a REST (only!) interface", true, false);
+		bool archive_access = cfg_bool(server, "archive-access", "when enabled, you can retrieve recorded video/images", true, false);
+
+		std::string snapshot_dir = cfg_str(server, "snapshot-dir", "where to store snapshots (triggered by HTTP server). see \"allow-admin\".", true, "");
+
+		std::vector<filter *> *http_filters = NULL;
+		try {
+			const Setting & f = server.lookup("filters");
+			http_filters = load_filters(f, s, r);
+		}
+		catch(SettingNotFoundException & snfe) {
+		}
+
+		double fps = 0, interval = 0;
+		if (!find_interval_or_fps(server, &interval, "fps", &fps) && is_rest == false)
+			interval_fps_error("fps", "for showing video frames", id.c_str());
+
+		instance_t *look_at = local_instance ? ci : NULL;
+
+		interface *h = new http_server(cfg, id, look_at, listen_adapter, listen_port, fps, jpeg_quality, time_limit, http_filters, r, resize_w, resize_h, motion_compatible, allow_admin, archive_access, snapshot_dir, is_rest);
+		ci -> interfaces.push_back(h);
+	}
+}
+
 void version()
 {
 	printf(NAME " " VERSION "\n");
-	printf("(C) 2017 by Folkert van Heusden\n\n");
+	printf("(C) 2017-2018 by Folkert van Heusden\n\n");
 }
 
 void help()
@@ -552,9 +602,14 @@ int main(int argc, char *argv[])
 	if (n_instances == 0)
 		log(LL_WARNING, " 0 instances, is that correct? Note that since version 2.0 the configuration file layout changed a tiny bit to accomodate multiple instances!");
 
+	instance_t *main_instance = NULL;
+
 	for(size_t i_loop=0; i_loop<n_instances; i_loop++) {
 		const Setting &instance_root = o_instances[i_loop];
 		instance_t *ci = new instance_t; // ci = current instance
+
+		if (main_instance == NULL)
+			main_instance = ci;
 
 		ci ->name = cfg_str(instance_root, "instance-name", "instance-name", false, "");
 
@@ -650,61 +705,14 @@ int main(int argc, char *argv[])
 		log(LL_INFO, "Configuring the HTTP server(s)...");
 
 		try {
-			const Setting &hs = instance_root["http-server"];
-			size_t n_hl = hs.getLength();
-
-			log(LL_DEBUG, " %zu http server(s)", n_hl);
-
-			if (n_hl == 0)
-				log(LL_WARNING, " 0 servers, is that correct?");
-
-			for(size_t i=0; i<n_hl; i++) {
-				const Setting &server = hs[i];
-
-				const std::string id = cfg_str(server, "id", "some identifier; visible in e.g. the http server", true, "");
-
-				std::string listen_adapter = cfg_str(server, "listen-adapter", "network interface to listen on or 0.0.0.0 for all", false, "");
-				int listen_port = cfg_int(server, "listen-port", "port to listen on", false, 8080);
-				log(LL_INFO, " HTTP server listening on %s:%d", listen_adapter.c_str(), listen_port);
-
-				int jpeg_quality = cfg_int(server, "quality", "JPEG quality, this influences the size", true, 75);
-				int time_limit = cfg_int(server, "time-limit", "how long (in seconds) to stream before the connection is closed", true, -1);
-
-				int resize_w = cfg_int(server, "resize-width", "resize picture width to this (-1 to disable)", true, -1);
-				int resize_h = cfg_int(server, "resize-height", "resize picture height to this (-1 to disable)", true, -1);
-
-				bool local_instance = cfg_bool(server, "local-instance", "show only parameters related to this instance", true, true);
-				bool motion_compatible = cfg_bool(server, "motion-compatible", "only stream MJPEG and do not wait for HTTP request", true, false);
-				bool allow_admin = cfg_bool(server, "allow-admin", "when enabled, you can partially configure services", true, false);
-				bool is_rest = cfg_bool(server, "is-rest", "when enabled then this is a REST (only!) interface", true, false);
-				bool archive_access = cfg_bool(server, "archive-access", "when enabled, you can retrieve recorded video/images", true, false);
-
-				std::string snapshot_dir = cfg_str(server, "snapshot-dir", "where to store snapshots (triggered by HTTP server). see \"allow-admin\".", true, "");
-
-				std::vector<filter *> *http_filters = NULL;
-				try {
-					const Setting & f = server.lookup("filters");
-					http_filters = load_filters(f, s, r);
-				}
-				catch(SettingNotFoundException & snfe) {
-				}
-
-				double fps = 0, interval = 0;
-				if (!find_interval_or_fps(server, &interval, "fps", &fps) && is_rest == false)
-					interval_fps_error("fps", "for showing video frames", id.c_str());
-
-				instance_t *look_at = local_instance ? ci : NULL;
-
-				interface *h = new http_server(&cfg, id, look_at, listen_adapter, listen_port, fps, jpeg_quality, time_limit, http_filters, r, resize_w, resize_h, motion_compatible, allow_admin, archive_access, snapshot_dir, is_rest);
-				ci -> interfaces.push_back(h);
-			}
+			load_http_servers(&cfg, ci, instance_root["http-server"], true, s, r);
 		}
 		catch(const SettingNotFoundException &nfex) {
 			log(LL_INFO, " no HTTP server");
 		}
-	//	catch(SettingException & se) {
-	//		error_exit(false, "Error in %s", se.getPath());
-	//	}
+		//	catch(SettingException & se) {
+		//		error_exit(false, "Error in %s", se.getPath());
+		//	}
 
 		//***
 
@@ -777,7 +785,7 @@ int main(int argc, char *argv[])
 				catch(SettingNotFoundException & snfe) {
 				}
 
-	/////////////
+				/////////////
 				std::vector<target *> *motion_targets = new std::vector<target *>();
 
 				try {
@@ -797,7 +805,7 @@ int main(int argc, char *argv[])
 				}
 				catch(SettingNotFoundException & snfe) {
 				}
-	//////////
+				//////////
 				std::string file = cfg_str(trigger, "trigger-plugin-file", "filename of motion detection plugin", true, "");
 				ext_trigger_t *et = NULL;
 				if (!file.empty()) {
@@ -856,6 +864,8 @@ int main(int argc, char *argv[])
 
 		cfg.instances.push_back(ci);
 	}
+
+	load_http_servers(&cfg, main_instance, root["global-http-server"], false, NULL, NULL);
 
 	std::set<std::string> check_id;
 	for(instance_t * inst : cfg.instances) {
@@ -927,10 +937,10 @@ int main(int argc, char *argv[])
 
 	delete r;
 
-// FIXME	if (et) {
-// FIXME		dlclose(et -> library);
-// FIXME		delete et;
-// FIXME	}
+	// FIXME	if (et) {
+	// FIXME		dlclose(et -> library);
+	// FIXME		delete et;
+	// FIXME	}
 
 	curl_global_cleanup();
 
