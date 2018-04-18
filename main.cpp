@@ -867,7 +867,12 @@ int main(int argc, char *argv[])
 		cfg.instances.push_back(ci);
 	}
 
-	load_http_servers(&cfg, main_instance, root["global-http-server"], false, NULL, NULL);
+	try {
+		load_http_servers(&cfg, main_instance, root["global-http-server"], false, NULL, NULL);
+	}
+	catch(const SettingNotFoundException &nfex) {
+		log(LL_INFO, " no global HTTP(/REST) server(s)");
+	}
 
 	std::set<std::string> check_id;
 	for(instance_t * inst : cfg.instances) {
