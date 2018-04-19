@@ -36,9 +36,15 @@ target::~target()
 	delete filters;
 }
 
-void target::start(std::vector<frame_t> *const pre_record)
+void target::register_file(const std::string & filename)
+{
+	get_db() -> register_file(id, current_event_nr, filename);
+}
+
+void target::start(std::vector<frame_t> *const pre_record, const unsigned long event_nr)
 {
 	this -> pre_record = pre_record;
+	this -> current_event_nr = event_nr;
 
 	interface::start();
 }

@@ -9,7 +9,7 @@ meta * interface::get_meta()
 	return &m;
 }
 
-static db *dbi = NULL;
+db *dbi = NULL;
 void register_database(const std::string & database)
 {
 	dbi = new db(database);

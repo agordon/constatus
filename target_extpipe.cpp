@@ -114,6 +114,7 @@ void target_extpipe::operator()()
 
 		if (p_fd == NULL) {
 			name = gen_filename(store_path, prefix, "", get_us(), f_nr++);
+			register_file(name);
 
 			if (!exec_start.empty() && is_start) {
 				exec(exec_start, name);

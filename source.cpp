@@ -21,7 +21,6 @@ source::source(const std::string & id, const std::string & descr, const double m
 	frame_rgb_len = 0;
 	frame_jpeg = NULL;
 	frame_jpeg_len = 0;
-printf("timeout %f\n", timeout);
 
 	cond = PTHREAD_COND_INITIALIZER;
 

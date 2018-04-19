@@ -104,8 +104,7 @@ void motion_trigger::operator()()
 
 	log(LL_INFO, "Go!");
 
-	struct timeval ets, ete;
-
+	unsigned long event_nr = -1;
 	for(;!local_stop_flag;) {
 		pauseCheck();
 
@@ -183,13 +182,15 @@ void motion_trigger::operator()()
 				if (!motion) {
 					log(LL_DEBUG, " starting store");
 
+					struct timeval ets;
 					gettimeofday(&ets, NULL);
+					event_nr = get_db() -> register_event(id, EVT_MOTION, "FIXME", &ets);
 
 					std::vector<frame_t> *pr = new std::vector<frame_t>(prerecord);
 					prerecord.clear();
 
 					for(size_t i=0; i<targets -> size(); i++)
-						targets -> at(i) -> start(i == 0 ? pr : NULL); // FIXME for all targets
+						targets -> at(i) -> start(i == 0 ? pr : NULL, event_nr); // FIXME for all targets
 
 					if (targets -> empty())
 						delete pr;
@@ -211,10 +212,11 @@ void motion_trigger::operator()()
 				pthread_rwlock_unlock(&keep_recording_n_frames_lock);
 
 				if (stopping > temp) {
-					log(LL_INFO, " stopping");
+					log(LL_INFO, " stopping (%ld)", event_nr);
 
+					struct timeval ete;
 					gettimeofday(&ete, NULL);
-					get_db() -> register_event(id, EVT_MOTION, "FIXME", &ets, &ete);
+					get_db() -> update_event(event_nr, &ete);
 
 					for(target *t : *targets)
 						t -> stop();
