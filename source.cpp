@@ -104,10 +104,10 @@ bool source::get_frame(const encoding_t pe, const int jpeg_quality, uint64_t *ts
 	clock_gettime(CLOCK_REALTIME, &spec);
 
 	time_t to_s = spec.tv_sec + timeout;
-	long to_ns = spec.tv_nsec + (timeout - time_t(timeout)) * 1000 * 1000 * 1000;
+	long to_ns = spec.tv_nsec + (timeout - time_t(timeout)) * 1000l * 1000l * 1000l;
 
-	to_s += to_ns / 1000000000;
-	to_ns %= 1000000000;
+	to_s += to_ns / 1000000000l;
+	to_ns %= 1000000000l;
 
 	if (timeout <= 0) {
 		to_s = spec.tv_sec + 1;
