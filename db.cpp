@@ -92,6 +92,10 @@ db::db(const std::string & file)
 	if (sqlite3_open(file.c_str(), &dbh) != SQLITE_OK)
 		error_exit(false, "Cannot open/create database file %s", file.c_str());
 
+	sqlite3_enable_shared_cache(1);
+
+	do_query(dbh, "PRAGMA journal_mode=WAL");
+
 	/// events
 	if (!check_table_exists(dbh, "events"))
 		do_query(dbh, "CREATE TABLE events(nr INTEGER PRIMARY KEY AUTOINCREMENT, id text not null, ts_start datetime not null, ts_end datetime, type integer not null, parameter1 text)");
