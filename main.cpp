@@ -871,6 +871,7 @@ int main(int argc, char *argv[])
 	}
 
 	try {
+		log(LL_INFO, "Loading global HTTP(/REST) server(s)");
 		load_http_servers(&cfg, main_instance, root["global-http-server"], false, NULL, NULL);
 	}
 	catch(const SettingNotFoundException &nfex) {
