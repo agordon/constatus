@@ -613,15 +613,15 @@ int main(int argc, char *argv[])
 		if (main_instance == NULL)
 			main_instance = ci;
 
-		ci ->name = cfg_str(instance_root, "instance-name", "instance-name", false, "");
+		ci -> name = cfg_str(instance_root, "instance-name", "instance-name", true, "default instance name");
 
 		//***
-		const Setting &o_source = instance_root["source"];
-
 		source *s = NULL;
 
 		try
 		{
+			const Setting &o_source = instance_root["source"];
+
 			log(LL_INFO, "Configuring the video-source...");
 			const std::string s_type = cfg_str(o_source, "type", "source-type", false, "");
 			const std::string id = cfg_str(o_source, "id", "some identifier: used for selecting this module", true, "");
@@ -674,6 +674,8 @@ int main(int argc, char *argv[])
 			else {
 				log(LL_FATAL, " no source defined!");
 			}
+
+			ci -> interfaces.push_back(s);
 		}
 		catch(SettingException & se) {
 			error_exit(false, "Error in %s", se.getPath());
@@ -724,8 +726,8 @@ int main(int argc, char *argv[])
 		{
 			const Setting &o_vlb = instance_root["video-loopback"];
 
-			const std::string id = cfg_str(o_source, "id", "some identifier: used for selecting this module", true, "");
-			const std::string descr = cfg_str(o_source, "descr", "description: visible in e.g. the http server", true, "");
+			const std::string id = cfg_str(o_vlb, "id", "some identifier: used for selecting this module", true, "");
+			const std::string descr = cfg_str(o_vlb, "descr", "description: visible in e.g. the http server", true, "");
 
 			std::string dev = cfg_str(o_vlb, "device", "Linux v4l2 device to connect to", true, "");
 
@@ -764,8 +766,8 @@ int main(int argc, char *argv[])
 			for(size_t i=0; i<n_vlb; i++) {
 				const Setting &trigger = o_mt[i];
 
-				const std::string id = cfg_str(o_source, "id", "some identifier: used for selecting this module", true, "");
-				const std::string descr = cfg_str(o_source, "descr", "description: visible in e.g. the http server", true, "");
+				const std::string id = cfg_str(trigger, "id", "some identifier: used for selecting this module", true, "");
+				const std::string descr = cfg_str(trigger, "descr", "description: visible in e.g. the http server", true, "");
 
 				int noise_level = cfg_int(trigger, "noise-factor", "at what difference levell is the pixel considered to be changed", true, 32);
 				double pixels_changed_perctange = cfg_float(trigger, "pixels-changed-percentage", "what %% of pixels need to be changed before the motion trigger is triggered", true, 1.0);
@@ -874,13 +876,23 @@ int main(int argc, char *argv[])
 		log(LL_INFO, " no global HTTP(/REST) server(s)");
 	}
 
+	log(LL_INFO, "Configuring maintenance settings...");
+	std::string db;
+	try {
+		const Setting & m = root.lookup("maintenance");
+
+		db = cfg_str(m, "db-file", "database file", true, "");
+	}
+	catch(SettingNotFoundException & snfe) {
+		log(LL_INFO, " no maintenance-items set");
+	}
+	register_database(db);
+
 	std::set<std::string> check_id;
 	for(instance_t * inst : cfg.instances) {
-		// printf("%s\n", inst -> name.c_str());
-
 		for(const interface *const i: inst -> interfaces) {
 			std::string cur = i -> get_id();
-			// printf("\t%s\t%s\n", cur.c_str(), i -> get_descr().c_str());
+			//printf("%s %s %s\n", inst -> name.c_str(), cur.c_str(), i -> get_descr().c_str());
 
 			if (check_id.find(cur) != check_id.end())
 				log(LL_WARNING, "There are multiple modules with the same ID (%s): this will give problems when trying to use the REST interface!", cur.c_str());
@@ -919,8 +931,11 @@ int main(int argc, char *argv[])
 
 	log(LL_INFO, "Starting threads");
 	for(instance_t * i : cfg.instances) {
-		for(interface *t : i -> interfaces)
+		//printf("%s\n", i -> name.c_str());
+		for(interface *t : i -> interfaces) {
+			//printf("\t%s\n", t -> get_id().c_str());
 			t -> start();
+		}
 	}
 
 	log(LL_INFO, "System started");

@@ -21,6 +21,7 @@ source::source(const std::string & id, const std::string & descr, const double m
 	frame_rgb_len = 0;
 	frame_jpeg = NULL;
 	frame_jpeg_len = 0;
+printf("timeout %f\n", timeout);
 
 	cond = PTHREAD_COND_INITIALIZER;
 
@@ -128,7 +129,7 @@ bool source::get_frame(const encoding_t pe, const int jpeg_quality, uint64_t *ts
 
 	if (err || (!frame_rgb && !frame_jpeg)) {
 fail:
-		log(LL_INFO, "frame fail");
+		log(LL_INFO, "frame fail %d %d %d | %ld %ld", err, frame_rgb, frame_jpeg, this -> ts, *ts);
 
 		if (this -> width <= 0) {
 			if (this -> resize_w != -1) {

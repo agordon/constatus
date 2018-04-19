@@ -9,6 +9,17 @@ meta * interface::get_meta()
 	return &m;
 }
 
+static db *dbi = NULL;
+void register_database(const std::string & database)
+{
+	dbi = new db(database);
+}
+
+db * interface::get_db()
+{
+	return dbi;
+}
+
 interface::interface(const std::string & id, const std::string & descr) : id(id), descr(descr)
 {
 	th = NULL;

@@ -5,6 +5,9 @@
 #include <thread>
 
 #include "meta.h"
+#include "db.h"
+
+void register_database(const std::string & database);
 
 // C++ has no instanceOf
 typedef enum { CT_HTTPSERVER, CT_MOTIONTRIGGER, CT_TARGET, CT_SOURCE, CT_LOOPBACK, CT_NONE } classtype_t;
@@ -27,6 +30,7 @@ public:
 	virtual ~interface();
 
 	static meta * get_meta();
+	static db * get_db();
 
 	std::string get_id() const { return id; }
 	std::string get_id_hash_str() const;
