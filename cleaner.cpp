@@ -44,6 +44,8 @@ void cleaner::stop()
 
 void cleaner::operator()()
 {
+	log(LL_INFO, "Cleaner thread started");
+
 	for(;!local_stop_flag;) {
 		log(LL_INFO, "cleaning (%d interval)", check_interval);
 		std::vector<std::string> files = dbi -> purge(purge_interval);
@@ -55,4 +57,6 @@ void cleaner::operator()()
 
 		mysleep(check_interval, &local_stop_flag, NULL);
 	}
+
+	log(LL_INFO, "Cleaner thread terminating");
 }

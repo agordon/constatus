@@ -50,6 +50,7 @@ Required:
 - libcairo2-dev
 - libnetpbm10-dev
 - libexiv2-dev
+- libsqlite3-dev
 
 If you don't want to use libexiv2 or ligwavi, then remove them from the Makefile and config.h.
 

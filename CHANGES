@@ -19,3 +19,5 @@ v2.0
 	   motion_trigger = {
 	   }
 	})
+
+ * 2.0 requires sqlite3 although you can disable that by removing sqlite3 from Makefile and commenting out WITH_SQLITE3 in config.h
