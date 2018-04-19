@@ -101,14 +101,19 @@ void source::set_frame(const encoding_t pe, const uint8_t *const data, const siz
 
 bool source::get_frame(const encoding_t pe, const int jpeg_quality, uint64_t *ts, int *width, int *height, uint8_t **frame, size_t *frame_len)
 {
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
+	struct timespec spec;
+	clock_gettime(CLOCK_REALTIME, &spec);
 
-	time_t to_s = tv.tv_sec + timeout;
-	long to_ns = (timeout - time_t(timeout)) * 1000 * 1000 * 1000;
+	time_t to_s = spec.tv_sec + timeout;
+	long to_ns = spec.tv_nsec + (timeout - time_t(timeout)) * 1000 * 1000 * 1000;
 
-	if (timeout <= 0)
-		to_ns = 100000000;
+	to_s += to_ns / 1000000000;
+	to_ns %= 1000000000;
+
+	if (timeout <= 0) {
+		to_s = spec.tv_sec + 1;
+		to_ns = 0;
+	}
 
 	struct timespec tc = { to_s, to_ns };
 
