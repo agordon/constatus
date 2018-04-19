@@ -53,6 +53,7 @@ using namespace libconfig;
 #include "resize_crop.h"
 #include "filter_motion_only.h"
 #include "selection_mask.h"
+#include "cleaner.h"
 
 std::string cfg_str(const Config & cfg, const char *const key, const char *descr, const bool optional, const std::string & def)
 {
@@ -877,16 +878,21 @@ int main(int argc, char *argv[])
 	}
 
 	log(LL_INFO, "Configuring maintenance settings...");
-	std::string db;
+	cleaner *clnr = NULL;
 	try {
 		const Setting & m = root.lookup("maintenance");
 
-		db = cfg_str(m, "db-file", "database file", true, "");
+		std::string db_file = cfg_str(m, "db-file", "database file", true, "");
+		db *dbi = register_database(db_file);
+
+		int clean_interval = cfg_int(m, "clean-interval", "how often (in seconds) to check for old files (-1 to disable)", true, -1);
+		int keep_max = cfg_int(m, "keep-max", "after how many days should things be deleted (-1 to disable)", true, -1);
+		clnr = new cleaner(dbi, clean_interval, keep_max * 86400);
 	}
 	catch(SettingNotFoundException & snfe) {
+		register_database("");
 		log(LL_INFO, " no maintenance-items set");
 	}
-	register_database(db);
 
 	std::set<std::string> check_id;
 	for(instance_t * inst : cfg.instances) {
@@ -938,6 +944,11 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	if (clnr) {
+		log(LL_INFO, "Starting cleaner");
+		clnr -> start();
+	}
+
 	log(LL_INFO, "System started");
 
 	getchar();
@@ -950,6 +961,9 @@ int main(int argc, char *argv[])
 		for(interface *t : i -> interfaces)
 			t -> stop();
 	}
+
+	if (clnr)
+		clnr -> stop();
 
 	log(LL_DEBUG, "Waiting for threads to terminate");
 

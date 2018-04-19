@@ -112,6 +112,19 @@ db::db(const std::string & file)
 	std::string ins_file_query = "INSERT INTO event_files(event_nr, id, file) VALUES(?, ?, ?)";
 	if (sqlite3_prepare_v2(dbh, ins_file_query.c_str(), -1, &stmt_file_insert, NULL))
 		error_exit(false, "DB error generating prepared statement");
+
+	// purge 1
+	std::string purge_query_1 = "select file, nr from events, event_files where CAST(strftime('%s', CURRENT_TIMESTAMP) as integer) - CAST(strftime('%s', ts_end) AS integer) > ? and not ts_end is null and events.nr = event_nr";
+	if (sqlite3_prepare_v2(dbh, purge_query_1.c_str(), -1, &stmt_file_purge1, NULL))
+		error_exit(false, "DB error generating prepared statement: %s", sqlite3_errmsg(dbh));
+	// purge2
+	std::string purge_query_2 = "delete from event_files where event_nr=?";
+	if (sqlite3_prepare_v2(dbh, purge_query_2.c_str(), -1, &stmt_file_purge2, NULL))
+		error_exit(false, "DB error generating prepared statement: %s", sqlite3_errmsg(dbh));
+	// purge3
+	std::string purge_query_3 = "delete from events where nr=?";
+	if (sqlite3_prepare_v2(dbh, purge_query_3.c_str(), -1, &stmt_file_purge3, NULL))
+		error_exit(false, "DB error generating prepared statement: %s", sqlite3_errmsg(dbh));
 #endif
 }
 
@@ -197,4 +210,56 @@ void db::register_file(const std::string & id, const unsigned long event_nr, con
 	if (sqlite3_step(stmt_file_insert) != SQLITE_DONE)
 		error_exit(false, "sqlite3_step(file insert) failed: %s", sqlite3_errmsg(dbh));
 #endif
+}
+
+std::vector<std::string> db::purge(const int max_age)
+{
+	std::vector<std::string> out;
+
+#ifdef WITH_SQLITE3
+	if (!dbh)
+		return out;
+
+	int err = 0;
+
+	if (sqlite3_reset(stmt_file_purge1))
+		error_exit(false, "sqlite3_reset on stmt_file_purge1 failed");
+
+	if ((err = sqlite3_bind_int(stmt_file_purge1, 1, max_age)) != SQLITE_OK)
+		error_exit("sqlite3_bind_int stmt_file_purge1 failed: %s", sqlite3_errmsg(dbh));
+
+	std::vector<unsigned long> nrs;
+	while((sqlite3_step(stmt_file_purge1) == SQLITE_ROW)) {
+		out.push_back((const char *)sqlite3_column_text(stmt_file_purge1, 0));
+
+		nrs.push_back(sqlite3_column_int(stmt_file_purge1, 1));
+	}
+
+	start_transaction(dbh);
+	// purge nrs from event_files and events
+	for(unsigned long event_nr : nrs){
+		if (sqlite3_reset(stmt_file_purge2))
+			error_exit(false, "sqlite3_reset on stmt_file_purge2 failed");
+
+		if ((err = sqlite3_bind_int(stmt_file_purge2, 1, event_nr)) != SQLITE_OK)
+			error_exit("sqlite3_bind_int stmt_file_purge2 failed: %s", sqlite3_errmsg(dbh));
+
+		if (sqlite3_step(stmt_file_purge2) != SQLITE_DONE)
+			error_exit(false, "sqlite3_step(file purge2) failed: %s", sqlite3_errmsg(dbh));
+
+
+		if (sqlite3_reset(stmt_file_purge3))
+			error_exit(false, "sqlite3_reset on stmt_file_purge3 failed");
+
+		if ((err = sqlite3_bind_int(stmt_file_purge3, 1, event_nr)) != SQLITE_OK)
+			error_exit("sqlite3_bind_int stmt_file_purge3 failed: %s", sqlite3_errmsg(dbh));
+
+		if (sqlite3_step(stmt_file_purge3) != SQLITE_DONE)
+			error_exit(false, "sqlite3_step(file purge3) failed: %s", sqlite3_errmsg(dbh));
+	}
+
+	commit_transaction(dbh);
+#endif
+
+	return out;
 }

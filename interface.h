@@ -7,7 +7,7 @@
 #include "meta.h"
 #include "db.h"
 
-void register_database(const std::string & database);
+db * register_database(const std::string & database);
 
 // C++ has no instanceOf
 typedef enum { CT_HTTPSERVER, CT_MOTIONTRIGGER, CT_TARGET, CT_SOURCE, CT_LOOPBACK, CT_NONE } classtype_t;

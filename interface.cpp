@@ -10,9 +10,10 @@ meta * interface::get_meta()
 }
 
 db *dbi = NULL;
-void register_database(const std::string & database)
+db * register_database(const std::string & database)
 {
 	dbi = new db(database);
+	return dbi;
 }
 
 db * interface::get_db()
