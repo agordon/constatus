@@ -1472,13 +1472,16 @@ std::string unescape(const std::string & in, const uint64_t ts, source *const s)
 	std::string work = text_out;
 	free(text_out);
 
-	meta *m = s -> get_meta();
+	meta *m = NULL;
+	if (s) {
+		m = s -> get_meta();
 
-	replace_int(m, &work, "$http-viewers$");
-	replace_int(m, &work, "$vnc-viewers$");
-	replace_double(m, &work, "$pixels-changed$");
-	work = search_replace(work, "$width$", myformat("%d", s -> get_width()));
-	work = search_replace(work, "$height$", myformat("%d", s -> get_height()));
+		replace_int(m, &work, "$http-viewers$");
+		replace_int(m, &work, "$vnc-viewers$");
+		replace_double(m, &work, "$pixels-changed$");
+		work = search_replace(work, "$width$", myformat("%d", s -> get_width()));
+		work = search_replace(work, "$height$", myformat("%d", s -> get_height()));
+	}
 	work = search_replace(work, "$name$", NAME);
 	work = search_replace(work, "$version$", VERSION);
 
@@ -1500,13 +1503,13 @@ std::string unescape(const std::string & in, const uint64_t ts, source *const s)
 		std::pair<uint64_t, double> val_double;
 		std::pair<uint64_t, std::string> val_string;
 
-		if (m -> get_int(name, &val_int)) {
+		if (m && m -> get_int(name, &val_int)) {
 			work = search_replace(work, name, myformat("%d", val_int.second));
 		}
-		else if (m -> get_double(name, &val_double)) {
+		else if (m && m -> get_double(name, &val_double)) {
 			work = search_replace(work, name, myformat("%f", val_double.second));
 		}
-		else if (m -> get_string(name, &val_string)) {
+		else if (m && m -> get_string(name, &val_string)) {
 			work = search_replace(work, name, val_string.second);
 		}
 		else {
