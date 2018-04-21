@@ -12,14 +12,14 @@ extern "C" {
 #include <libavutil/imgutils.h>
 }
 
-#include "source_rtsp.h"
+#include "source_stream.h"
 #include "error.h"
 #include "log.h"
 #include "utils.h"
 
 static bool v = false;
 
-source_rtsp::source_rtsp(const std::string & id, const std::string & descr, const std::string & url, const bool tcp, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout) : source(id, descr, max_fps, r, resize_w, resize_h, loglevel, timeout), url(url), tcp(tcp)
+source_stream::source_stream(const std::string & id, const std::string & descr, const std::string & url, const bool tcp, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout) : source(id, descr, max_fps, r, resize_w, resize_h, loglevel, timeout), url(url), tcp(tcp)
 {
 	v = loglevel >= LL_DEBUG;
 
@@ -27,7 +27,7 @@ source_rtsp::source_rtsp(const std::string & id, const std::string & descr, cons
 		this -> descr = url;
 }
 
-source_rtsp::~source_rtsp()
+source_stream::~source_stream()
 {
 	stop();
 }
@@ -48,11 +48,11 @@ void my_log_callback(void *ptr, int level, const char *fmt, va_list vargs)
 	}
 }
 
-void source_rtsp::operator()()
+void source_stream::operator()()
 {
 	log(LL_INFO, "source rtsp thread started");
 
-	set_thread_name("src_h_rtsp");
+	set_thread_name("src_stream");
 
 	int ll = AV_LOG_DEBUG;
 	if (loglevel == LL_FATAL)

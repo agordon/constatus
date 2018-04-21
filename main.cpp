@@ -19,8 +19,7 @@ using namespace libconfig;
 #include "source.h"
 #include "source_v4l.h"
 #include "source_http_jpeg.h"
-#include "source_http_mjpeg.h"
-#include "source_rtsp.h"
+#include "source_stream.h"
 #include "source_plugin.h"
 #include "http_server.h"
 #include "motion_trigger.h"
@@ -654,17 +653,11 @@ int main(int argc, char *argv[])
 
 				s = new source_http_jpeg(id, descr, url, ign_cert, auth, max_fps, r, resize_w, resize_h, loglevel, timeout);
 			}
-			else if (s_type == "mjpeg") {
-				const std::string url = cfg_str(o_source, "url", "address of MJPEG stream", false, "");
-				bool ign_cert = cfg_bool(o_source, "ignore-cert", "ignore SSL errors", true, false);
-
-				s = new source_http_mjpeg(id, descr, url, ign_cert, max_fps, r, resize_w, resize_h, loglevel, timeout);
-			}
-			else if (s_type == "rtsp") {
-				const std::string url = cfg_str(o_source, "url", "address of JPEG stream", false, "");
+			else if (s_type == "rtsp" || s_type == "mjpeg" || s_type == "stream") {
+				const std::string url = cfg_str(o_source, "url", "address of video stream", false, "");
 				bool tcp = cfg_bool(o_source, "tcp", "use TCP for RTSP transport (instead of default UDP)", true, false);
 
-				s = new source_rtsp(id, descr, url, tcp, max_fps, r, resize_w, resize_h, loglevel, timeout);
+				s = new source_stream(id, descr, url, tcp, max_fps, r, resize_w, resize_h, loglevel, timeout);
 			}
 			else if (s_type == "plugin") {
 				std::string plugin_bin = cfg_str(o_source, "source-plugin-file", "filename of video data source plugin", true, "");
