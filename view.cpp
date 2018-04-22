@@ -10,27 +10,6 @@ view::~view()
 {
 }
 
-std::string dim(const std::string & name, const int v)
-{
-	if (v != -1)
-		return myformat(" %s=%d", name.c_str(), v);
-
-	return "";
-}
-
-std::string dim_str(const int width, const int height)
-{
-	std::string s;
-
-	if (width != -1)
-		s += dim("width", width);
-
-	if (height != -1)
-		s += dim("height", height);
-
-	return s;
-}
-
 std::string view::get_html() const
 {
 	std::string col_size, row_size;
@@ -61,7 +40,7 @@ std::string view::get_html() const
 
 	for(int y=0; y<grid_height; y++) {
 		for(int x=0; x<grid_width; x++) {
-			out += myformat("<div class=\"grid-item\"><img src=\"%s\"%s></div>", http_server::mjpeg_stream_url(cfg, sources.at(nr++)).c_str(), dim_str(each_w, each_h).c_str());
+			out += myformat("<div class=\"grid-item\"><img src=\"%s\"></div>", http_server::mjpeg_stream_url(cfg, sources.at(nr++)).c_str());
 
 			if (nr == sources.size())
 				goto done;
