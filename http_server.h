@@ -25,5 +25,7 @@ public:
 	http_server(configuration_t *const cfg, const std::string & id, const std::string & descr, instance_t *const inst, const std::string & http_adapter, const int http_port, const double fps, const int quality, const int time_limit, const std::vector<filter *> *const f, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, const bool allow_admin, const bool archive_access, const std::string & snapshot_dir, const bool is_rest);
 	virtual ~http_server();
 
+	static std::string mjpeg_stream_url(configuration_t *const cfg, const std::string & id);
+
 	void operator()();
 };

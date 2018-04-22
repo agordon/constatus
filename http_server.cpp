@@ -486,6 +486,21 @@ std::string describe_interface(const instance_t *const inst, const interface *co
 	return out;
 }
 
+void find_by_id(const configuration_t *const cfg, const std::string & id, instance_t **inst, interface **i)
+{
+	*inst = NULL;
+	*i = NULL;
+
+	for(instance_t * cur_inst : cfg -> instances) {
+		for(interface *cur_i : cur_inst -> interfaces) {
+			if (cur_i -> get_id() == id) {
+				*inst = cur_inst;
+				*i = cur_i;
+			}
+		}
+	}
+}
+
 source *find_source(instance_t *const inst)
 {
 	for(interface *i : inst -> interfaces) {
@@ -1004,13 +1019,25 @@ const std::string html_header =
 		"<body>"
 		"<h1>" NAME " " VERSION " / %s</h1>";
 
-		const std::string html_tail =
+const std::string html_tail =
 		"<p><br><br><br></p><hr><div id=\"tail\"><p>" NAME " was written by folkert@vanheusden.com</p></div>"
 		"</body>"
 		"</html>";
 
-		const std::string action_failed = "<h2>%s</h2><p>Action failed</p>";
-		const std::string action_succeeded = "<h2>%s</h2><p>Action succeeded</p>";
+const std::string action_failed = "<h2>%s</h2><p>Action failed</p>";
+const std::string action_succeeded = "<h2>%s</h2><p>Action succeeded</p>";
+
+std::string http_server::mjpeg_stream_url(configuration_t *const cfg, const std::string & id)
+{
+	instance_t *inst = NULL;
+	interface *i = NULL;
+	find_by_id(cfg, id, &inst, &i);
+
+	if (!inst)
+		return "?";
+
+	return myformat("stream.mjpeg?inst=%lx", hash(inst -> name)); 
+}
 
 void handle_http_client(int cfd, double fps, int quality, int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, instance_t *inst, const std::string & snapshot_dir, const bool allow_admin, const bool archive_acces, configuration_t *const cfg)
 {

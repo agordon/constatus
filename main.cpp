@@ -54,6 +54,7 @@ using namespace libconfig;
 #include "filter_motion_only.h"
 #include "selection_mask.h"
 #include "cleaner.h"
+#include "view.h"
 
 std::string cfg_str(const Config & cfg, const char *const key, const char *descr, const bool optional, const std::string & def)
 {
@@ -411,6 +412,31 @@ target * load_target(const Setting & in, source *const s, resize *const r)
 	}
 
 	return t;
+}
+
+view * load_view(configuration_t *const cfg, const Setting & in)
+{
+	const std::string id = cfg_str(in, "id", "some identifier: used for selecting this module", true, "");
+	const std::string descr = cfg_str(in, "descr", "description: visible in e.g. the http server", true, "");
+
+	const std::string type = cfg_str(in, "type", "type: html-grid", false, "html-grid");
+
+	if (type != "html-grid")
+		error_exit(false, "Currently only \"html-grid\" (for views, id %s) is supported", id.c_str());
+
+	std::vector<std::string> ids;
+	const Setting & s_ids = in.lookup("sources");
+	size_t n_ids = s_ids.getLength();
+	for(size_t i=0; i<n_ids; i++)
+		ids.push_back(s_ids[i]);
+
+	int width = cfg_int(in, "width", "width of the total view", true, -1);
+	int height = cfg_int(in, "height", "height of the total view", true, -1);
+
+	int gwidth = cfg_int(in, "grid-width", "number of columns", true, -1);
+	int gheight = cfg_int(in, "grid-height", "number of rows", true, -1);
+
+	return new view(cfg, id, descr, width, height, ids, gwidth, gheight);
 }
 
 void load_http_servers(configuration_t *const cfg, instance_t *const ci, const Setting & hs, const bool local_instance, source *const s, resize *const r)
@@ -877,6 +903,26 @@ int main(int argc, char *argv[])
 	}
 	catch(const SettingNotFoundException &nfex) {
 		log(LL_INFO, " no global HTTP(/REST) server(s)");
+	}
+
+	//***
+	log(LL_INFO, "Configuring views...");
+	std::vector<view *> views;
+	try {
+		const Setting & v = root.lookup("views");
+
+		size_t n_v = v.getLength();
+		log(LL_DEBUG, " %zu views", n_v);
+
+		for(size_t i=0; i<n_v; i++) {
+			const Setting & cv = v[i];
+
+			view *v = load_view(&cfg, cv);
+			views.push_back(v);
+		}
+	}
+	catch(SettingNotFoundException & snfe) {
+		log(LL_INFO, " no stream-to-disk backends defined");
 	}
 
 	log(LL_INFO, "Configuring maintenance settings...");
