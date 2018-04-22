@@ -26,7 +26,7 @@ clean:
 
 package: clean
 	mkdir constatus-$(VERSION)
-	cp -a man/ meta-plugins filter-plugins motiontrigger-plugins source-plugins streamwriter-plugins *.cpp *.h README README.rest CHANGES constatus.cfg Makefile motion-to-constatus.py constatus-$(VERSION)
+	cp -a man/ *.cpp *.h README constatus.cfg debian favicon.ico stylesheet.css LICENSE filter-plugins meta-plugins motiontrigger-plugins source-plugins streamwriter-plugins Makefile motion-to-constatus.py README README.rest CHANGES constatus-$(VERSION)
 	tar czf constatus-$(VERSION).tgz constatus-$(VERSION)
 	rm -rf constatus-$(VERSION)
 
