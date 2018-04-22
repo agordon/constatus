@@ -48,6 +48,7 @@ typedef struct {
 	bool motion_compatible, allow_admin, archive_acces, is_rest;
 	configuration_t *cfg;
 	std::string snapshot_dir;
+	std::vector<view *> *views;
 } http_thread_t;
 
 void send_mjpeg_stream(int cfd, source *s, double fps, int quality, bool get, int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h)
@@ -1039,7 +1040,20 @@ std::string http_server::mjpeg_stream_url(configuration_t *const cfg, const std:
 	return myformat("stream.mjpeg?inst=%lx", hash(inst -> name)); 
 }
 
-void handle_http_client(int cfd, double fps, int quality, int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, instance_t *inst, const std::string & snapshot_dir, const bool allow_admin, const bool archive_acces, configuration_t *const cfg)
+view *find_view(std::vector<view *> *const views, const std::string & id)
+{
+	if (!views)
+		return NULL;
+
+	for(view *v : *views) {
+		if (v -> get_id() == id)
+			return v;
+	}
+
+	return NULL;
+}
+
+void handle_http_client(int cfd, double fps, int quality, int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, instance_t *inst, const std::string & snapshot_dir, const bool allow_admin, const bool archive_acces, configuration_t *const cfg, std::vector<view *> *const views)
 {
 	sigset_t all_sigs;
 	sigfillset(&all_sigs);
@@ -1288,6 +1302,22 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 				log(LL_DEBUG, "short write on response header");
 		}
 	}
+	else if (strcmp(path, "view-view") == 0) {
+		auto view_it = pars.find("id");
+		std::string id;
+
+		if (view_it != pars.end())
+			id = view_it -> second;
+
+		view *v = find_view(views, id);
+
+		std::string reply;
+		if (v)
+			reply = http_200_header + v -> get_html();
+
+		if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
+			log(LL_DEBUG, "short write on response");
+	}
 	else if ((strncmp(path, "view-snapshots/view-file", 24) == 0 || strncmp(path, "view-file", 9) == 0) && (archive_acces || allow_admin)) {
 		auto file_it = pars.find("file");
 		std::string file;
@@ -1473,7 +1503,7 @@ void * handle_http_client_thread(void *ct_in)
 		handle_rest(ct -> fd, ct -> cfg, ct -> global_stopflag, ct -> snapshot_dir, ct -> quality);
 	}
 	else {
-		handle_http_client(ct -> fd, ct -> fps, ct -> quality, ct -> time_limit, ct -> filters, ct -> global_stopflag, ct -> r, ct -> resize_w, ct -> resize_h, ct -> motion_compatible, ct -> inst, ct -> snapshot_dir, ct -> allow_admin, ct -> archive_acces, ct -> cfg);
+		handle_http_client(ct -> fd, ct -> fps, ct -> quality, ct -> time_limit, ct -> filters, ct -> global_stopflag, ct -> r, ct -> resize_w, ct -> resize_h, ct -> motion_compatible, ct -> inst, ct -> snapshot_dir, ct -> allow_admin, ct -> archive_acces, ct -> cfg, ct -> views);
 	}
 
 	delete ct;
@@ -1481,7 +1511,7 @@ void * handle_http_client_thread(void *ct_in)
 	return NULL;
 }
 
-http_server::http_server(configuration_t *const cfg, const std::string & id, const std::string & descr, instance_t *const inst, const std::string & http_adapter, const int http_port, const double fps, const int quality, const int time_limit, const std::vector<filter *> *const f, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, const bool allow_admin, const bool archive_acces, const std::string & snapshot_dir, const bool is_rest) : cfg(cfg), interface(id, descr), inst(inst), fps(fps), quality(quality), time_limit(time_limit), f(f), r(r), resize_w(resize_w), resize_h(resize_h), motion_compatible(motion_compatible), allow_admin(allow_admin), archive_acces(archive_acces), snapshot_dir(snapshot_dir), is_rest(is_rest)
+http_server::http_server(configuration_t *const cfg, const std::string & id, const std::string & descr, instance_t *const inst, const std::string & http_adapter, const int http_port, const double fps, const int quality, const int time_limit, const std::vector<filter *> *const f, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, const bool allow_admin, const bool archive_acces, const std::string & snapshot_dir, const bool is_rest, std::vector<view *> *const views) : cfg(cfg), interface(id, descr), inst(inst), fps(fps), quality(quality), time_limit(time_limit), f(f), r(r), resize_w(resize_w), resize_h(resize_h), motion_compatible(motion_compatible), allow_admin(allow_admin), archive_acces(archive_acces), snapshot_dir(snapshot_dir), is_rest(is_rest), views(views)
 {
 	fd = start_listen(http_adapter.c_str(), http_port, 5);
 	ct = CT_HTTPSERVER;
@@ -1543,6 +1573,7 @@ void http_server::operator()()
 		ct -> allow_admin = allow_admin;
 		ct -> archive_acces = archive_acces;
 		ct -> is_rest = is_rest;
+		ct -> views = views;
 
 		pthread_t th;
 		int rc = -1;

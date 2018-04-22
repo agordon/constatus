@@ -10,18 +10,47 @@ view::~view()
 {
 }
 
+std::string dim(const std::string & name, const int v)
+{
+	if (v != -1)
+		return myformat(" %s=%d", name.c_str(), v);
+
+	return "";
+}
+
+std::string dim_str(const int width, const int height)
+{
+	std::string s;
+
+	if (width != -1)
+		s += dim("width", width);
+
+	if (height != -1)
+		s += dim("height", height);
+
+	return s;
+}
+
 std::string view::get_html() const
 {
 	std::string out = "<html><body>";
-	out += myformat("<table width=%d height=%d>", width, height);
+
+	int each_w = -1, each_h = -1;
+	if (width != -1)
+		each_w = width / grid_width;
+	if (height != -1)
+		each_h = height / grid_height;
+
+	out += myformat("<table%s>", dim_str(width, height).c_str());
 
 	size_t nr = 0;
 
 	for(int y=0; y<grid_height; y++) {
-		out += "<tr>";
+
+		out += myformat("<tr%s>", dim_str(width, height).c_str());
 
 		for(int x=0; x<grid_width; x++)
-			out += myformat("<td><img src=\"%s\"></td>", http_server::mjpeg_stream_url(cfg, sources.at(nr++)).c_str());
+			out += myformat("<td><img src=\"%s\"%s></td>", http_server::mjpeg_stream_url(cfg, sources.at(nr++)).c_str(), dim_str(each_w, each_h).c_str());
 	}
 
 	out += "</table>";

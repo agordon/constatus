@@ -439,7 +439,7 @@ view * load_view(configuration_t *const cfg, const Setting & in)
 	return new view(cfg, id, descr, width, height, ids, gwidth, gheight);
 }
 
-void load_http_servers(configuration_t *const cfg, instance_t *const ci, const Setting & hs, const bool local_instance, source *const s, resize *const r)
+void load_http_servers(configuration_t *const cfg, instance_t *const ci, const Setting & hs, const bool local_instance, source *const s, resize *const r, std::vector<view *> *const views)
 {
 	size_t n_hl = hs.getLength();
 
@@ -485,7 +485,7 @@ void load_http_servers(configuration_t *const cfg, instance_t *const ci, const S
 
 		instance_t *look_at = local_instance ? ci : NULL;
 
-		interface *h = new http_server(cfg, id, descr, look_at, listen_adapter, listen_port, fps, jpeg_quality, time_limit, http_filters, r, resize_w, resize_h, motion_compatible, allow_admin, archive_access, snapshot_dir, is_rest);
+		interface *h = new http_server(cfg, id, descr, look_at, listen_adapter, listen_port, fps, jpeg_quality, time_limit, http_filters, r, resize_w, resize_h, motion_compatible, allow_admin, archive_access, snapshot_dir, is_rest, views);
 		ci -> interfaces.push_back(h);
 	}
 }
@@ -738,7 +738,7 @@ int main(int argc, char *argv[])
 		log(LL_INFO, "Configuring the HTTP server(s)...");
 
 		try {
-			load_http_servers(&cfg, ci, instance_root["http-server"], true, s, r);
+			load_http_servers(&cfg, ci, instance_root["http-server"], true, s, r, NULL);
 		}
 		catch(const SettingNotFoundException &nfex) {
 			log(LL_INFO, " no HTTP server");
@@ -897,14 +897,6 @@ int main(int argc, char *argv[])
 		cfg.instances.push_back(ci);
 	}
 
-	try {
-		log(LL_INFO, "Loading global HTTP(/REST) server(s)");
-		load_http_servers(&cfg, main_instance, root["global-http-server"], false, NULL, NULL);
-	}
-	catch(const SettingNotFoundException &nfex) {
-		log(LL_INFO, " no global HTTP(/REST) server(s)");
-	}
-
 	//***
 	log(LL_INFO, "Configuring views...");
 	std::vector<view *> views;
@@ -923,6 +915,14 @@ int main(int argc, char *argv[])
 	}
 	catch(SettingNotFoundException & snfe) {
 		log(LL_INFO, " no stream-to-disk backends defined");
+	}
+
+	try {
+		log(LL_INFO, "Loading global HTTP(/REST) server(s)");
+		load_http_servers(&cfg, main_instance, root["global-http-server"], false, NULL, NULL, &views);
+	}
+	catch(const SettingNotFoundException &nfex) {
+		log(LL_INFO, " no global HTTP(/REST) server(s)");
 	}
 
 	log(LL_INFO, "Configuring maintenance settings...");
