@@ -26,7 +26,13 @@ std::string view::get_html() const
 			row_size = "max-content";
 	}
 
-	std::string out = myformat("<html><head><style>.grid-container {\ndisplay: grid;\ngrid-template-columns: %s;\ngrid-column-gap:5px;\ngrid-row-gap:5px;grid-template-rows:%s;\n}\n.grid-item { }\n</style></head><body>", col_size.c_str(), row_size.c_str());
+	std::string dim;
+	if (width != -1)
+		dim += myformat("width:%dpx;", width);
+	if (height != -1)
+		dim += myformat("height:%dpx;", height);
+
+	std::string out = myformat("<html><head><style>.grid-container {\n%s;display: grid;\ngrid-template-columns: %s;\ngrid-column-gap:5px;\ngrid-row-gap:5px;grid-template-rows:%s;\n}\n.grid-item { }\n</style></head><body>", dim.c_str(), col_size.c_str(), row_size.c_str());
 
 	int each_w = -1, each_h = -1;
 	if (width != -1)
