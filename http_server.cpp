@@ -1037,8 +1037,10 @@ void http_server::mjpeg_stream_url(configuration_t *const cfg, const std::string
 	interface *i = NULL;
 	find_by_id(cfg, id, &inst, &i);
 
-	if (!inst)
+	if (!inst) {
 		*img_url = *page_url = "id unknown";
+		return;
+	}
 
 	*img_url = myformat("stream.mjpeg?inst=%s", url_escape(inst -> name).c_str()); 
 	*page_url = myformat("index.html?inst=%s", url_escape(inst -> name).c_str()); 
