@@ -1031,16 +1031,17 @@ const std::string html_tail =
 const std::string action_failed = "<h2>%s</h2><p>Action failed</p>";
 const std::string action_succeeded = "<h2>%s</h2><p>Action succeeded</p>";
 
-std::string http_server::mjpeg_stream_url(configuration_t *const cfg, const std::string & id)
+void http_server::mjpeg_stream_url(configuration_t *const cfg, const std::string & id, std::string *const img_url, std::string *const page_url)
 {
 	instance_t *inst = NULL;
 	interface *i = NULL;
 	find_by_id(cfg, id, &inst, &i);
 
 	if (!inst)
-		return "id not found";
+		*img_url = *page_url = "id unknown";
 
-	return myformat("stream.mjpeg?inst=%s", url_escape(inst -> name).c_str()); 
+	*img_url = myformat("stream.mjpeg?inst=%s", url_escape(inst -> name).c_str()); 
+	*page_url = myformat("index.html?inst=%s", url_escape(inst -> name).c_str()); 
 }
 
 view *find_view(std::vector<view *> *const views, const std::string & id)

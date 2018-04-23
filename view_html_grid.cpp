@@ -52,7 +52,10 @@ std::string view_html_grid::get_html() const
 
 	for(int y=0; y<grid_height; y++) {
 		for(int x=0; x<grid_width; x++) {
-			out += myformat("<div class=\"grid-item\"><img src=\"%s\"%s></div>", http_server::mjpeg_stream_url(cfg, sources.at(nr++)).c_str(), dim_img.c_str());
+			std::string img_url, page_url;
+			http_server::mjpeg_stream_url(cfg, sources.at(nr++), &img_url, &page_url);
+
+			out += myformat("<div class=\"grid-item\"><a href=\"%s\"><img src=\"%s\"%s></a></div>", page_url.c_str(), img_url.c_str(), dim_img.c_str());
 
 			if (nr == sources.size())
 				goto done;
