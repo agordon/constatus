@@ -1482,13 +1482,15 @@ std::string unescape(const std::string & in, const uint64_t ts, instance_t *cons
 		replace_double(m, &work, "$pixels-changed$");
 		work = search_replace(work, "$width$", myformat("%d", s -> get_width()));
 		work = search_replace(work, "$height$", myformat("%d", s -> get_height()));
+		work = search_replace(work, "$descr$", s -> get_descr());
+		work = search_replace(work, "$id$", s -> get_id());
 	}
 	std::string motion_string;
 	if (check_for_motion(i))
 		motion_string = "MOTION DETECTED";
 	work = search_replace(work, "$motion$", motion_string);
-	work = search_replace(work, "$name$", NAME);
-	work = search_replace(work, "$version$", VERSION);
+	work = search_replace(work, "$prog-name$", NAME);
+	work = search_replace(work, "$prog-version$", VERSION);
 
 	// find all other $...$ and search in meta
 	for(;;) {

@@ -22,6 +22,9 @@ void find_by_id(const configuration_t *const cfg, const std::string & id, instan
 
 source *find_source(instance_t *const inst)
 {
+	if (!inst)
+		return NULL;
+
 	for(interface *i : inst -> interfaces) {
 		if (i -> get_class_type() == CT_SOURCE)
 			return (source *)i;
