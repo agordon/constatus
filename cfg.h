@@ -26,3 +26,4 @@ instance_t *find_instance_by_interface(const configuration_t *const cfg, const i
 instance_t *find_instance_by_name(const configuration_t *const cfg, const std::string & name);
 interface *find_by_id(instance_t *const inst, const std::string & id);
 interface *find_by_id(configuration_t *const cfg, const std::string & id);
+bool check_for_motion(instance_t *const inst);

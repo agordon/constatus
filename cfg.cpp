@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "cfg.h"
+#include "motion_trigger.h"
 
 void find_by_id(const configuration_t *const cfg, const std::string & id, instance_t **inst, interface **i)
 {
@@ -75,4 +76,14 @@ interface *find_by_id(configuration_t *const cfg, const std::string & id)
 	}
 
 	return NULL;
+}
+
+bool check_for_motion(instance_t *const inst)
+{
+	for(interface *i : inst -> interfaces) {
+		if (((motion_trigger *)i) -> check_motion())
+			return true;
+	}
+
+	return false;
 }

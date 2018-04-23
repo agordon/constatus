@@ -3,16 +3,17 @@
 #include <string>
 
 #include "filter.h"
+#include "cfg.h"
 
 class filter_add_scaled_text : public filter
 {
 private:
 	std::string what, font_name;
 	const int x, y, font_size, r, g, b;
-	source *const s;
+	instance_t *const i;
 
 public:
-	filter_add_scaled_text(const std::string & what, const std::string & font_name, const int x, const int y, const int font_size, const int r, const int g, const int b, source *const s);
+	filter_add_scaled_text(const std::string & what, const std::string & font_name, const int x, const int y, const int font_size, const int r, const int g, const int b, instance_t *const i);
 	~filter_add_scaled_text();
 
 	bool uses_in_out() const { return true; }

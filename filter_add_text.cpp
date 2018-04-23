@@ -5,7 +5,7 @@
 
 #include "filter_add_text.h"
 #include "error.h"
-#include "interface.h"
+#include "cfg.h"
 #include "utils.h"
 
 constexpr unsigned char font[128][8][8] = {
@@ -1454,7 +1454,7 @@ void replace_double(meta *const m, std::string *const work, const std::string & 
 	work -> assign(search_replace(*work, key, myformat("%f", val.second)));
 }
 
-std::string unescape(const std::string & in, const uint64_t ts, source *const s)
+std::string unescape(const std::string & in, const uint64_t ts, instance_t *const i)
 {
 	time_t now = (time_t)(ts / 1000 / 1000);
 	struct tm ptm;
@@ -1473,6 +1473,7 @@ std::string unescape(const std::string & in, const uint64_t ts, source *const s)
 	free(text_out);
 
 	meta *m = NULL;
+	source *s = find_source(i);
 	if (s) {
 		m = s -> get_meta();
 
@@ -1482,6 +1483,10 @@ std::string unescape(const std::string & in, const uint64_t ts, source *const s)
 		work = search_replace(work, "$width$", myformat("%d", s -> get_width()));
 		work = search_replace(work, "$height$", myformat("%d", s -> get_height()));
 	}
+	std::string motion_string;
+	if (check_for_motion(i))
+		motion_string = "MOTION DETECTED";
+	work = search_replace(work, "$motion$", motion_string);
 	work = search_replace(work, "$name$", NAME);
 	work = search_replace(work, "$version$", VERSION);
 
@@ -1520,7 +1525,7 @@ std::string unescape(const std::string & in, const uint64_t ts, source *const s)
 	return work;
 }
 
-filter_add_text::filter_add_text(const std::string & whatIn, const text_pos_t tpIn, source *const s) : what(whatIn), tp(tpIn), s(s)
+filter_add_text::filter_add_text(const std::string & whatIn, const text_pos_t tpIn, instance_t *const i) : what(whatIn), tp(tpIn), i(i)
 {
 }
 
@@ -1568,11 +1573,11 @@ void add_text(unsigned char *const img, const int width, const int height, const
 	}
 }
 
-void print_timestamp(unsigned char *const img, const int width, const int height, const std::string & text, const text_pos_t n_pos, const uint64_t ts, source *const s)
+void print_timestamp(unsigned char *const img, const int width, const int height, const std::string & text, const text_pos_t n_pos, const uint64_t ts, instance_t *const i)
 {
 	int x = 0, y = 0;
 
-	std::string text_out = unescape(text, ts, s);
+	std::string text_out = unescape(text, ts, i);
 
 	int n_lines = 0, max_ll = 0;
 	find_text_dim(text_out.c_str(), &n_lines, &max_ll);
@@ -1602,5 +1607,5 @@ void print_timestamp(unsigned char *const img, const int width, const int height
 
 void filter_add_text::apply(const uint64_t ts, const int w, const int h, const uint8_t *const prev, uint8_t *const in_out)
 {
-	print_timestamp(in_out, w, h, what, tp, ts, s);
+	print_timestamp(in_out, w, h, what, tp, ts, i);
 }

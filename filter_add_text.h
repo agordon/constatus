@@ -3,7 +3,7 @@
 #include <string>
 
 #include "filter.h"
-#include "source.h"
+#include "cfg.h"
 
 typedef enum
 {
@@ -20,17 +20,17 @@ typedef enum
 } text_pos_t;
 
 void find_text_dim(const char *const in, int *const n_lines, int *const n_cols);
-std::string unescape(const std::string & in, const uint64_t ts, source *const s);
+std::string unescape(const std::string & in, const uint64_t ts, instance_t *const i);
 
 class filter_add_text : public filter
 {
 private:
 	std::string what;
 	text_pos_t tp;
-	source *const s;
+	instance_t *const i;
 
 public:
-	filter_add_text(const std::string & what, const text_pos_t tp, source *const s);
+	filter_add_text(const std::string & what, const text_pos_t tp, instance_t *const i);
 	~filter_add_text();
 
 	bool uses_in_out() const { return false; }

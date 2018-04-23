@@ -196,9 +196,11 @@ bool find_interval_or_fps(const Setting & cfg, double *const interval, const std
 	return true;
 }
 
-std::vector<filter *> *load_filters(const Setting & in, source *const s, resize *const r)
+std::vector<filter *> *load_filters(const Setting & in, instance_t *const inst, resize *const r)
 {
 	std::vector<filter *> *const filters = new std::vector<filter *>();
+
+	source *s = find_source(inst);
 
 	size_t n_f = in.getLength();
 	log(LL_DEBUG, " %zu filters", n_f);
@@ -291,7 +293,7 @@ std::vector<filter *> *load_filters(const Setting & in, source *const s, resize 
 			else
 				error_exit(false, "(text-)position %s is not understood", s_position.c_str());
 
-			filters -> push_back(new filter_add_text(s_text, tp, s));
+			filters -> push_back(new filter_add_text(s_text, tp, inst));
 		}
 		else if (s_type == "scaled-text") {
 			std::string s_text = cfg_str(ae, "text", "what text to show", false, "");
@@ -303,7 +305,7 @@ std::vector<filter *> *load_filters(const Setting & in, source *const s, resize 
 			int g = cfg_int(ae, "g", "green component of text color", true, 0);
 			int b = cfg_int(ae, "b", "blue component of text color", true, 0);
 
-			filters -> push_back(new filter_add_scaled_text(s_text, font, x, y, fs, r, g, b, s));
+			filters -> push_back(new filter_add_scaled_text(s_text, font, x, y, fs, r, g, b, inst));
 		}
 		else {
 			error_exit(false, "Filter %s is not known", s_type.c_str());
@@ -341,7 +343,7 @@ void interval_fps_error(const char *const name, const char *what, const char *id
 	error_exit(false, "Interval/%s %s not set or invalid (e.g. 0) for target (%s). Make sure that you use a float-value for the fps/interval, e.g. 13.0 instead of 13", name, what, id);
 }
 
-target * load_target(const Setting & in, source *const s, resize *const r)
+target * load_target(const Setting & in, instance_t *const i, resize *const r)
 {
 	target *t = NULL;
 
@@ -373,10 +375,12 @@ target * load_target(const Setting & in, source *const s, resize *const r)
 	std::vector<filter *> *filters = NULL;
 	try {
 		const Setting & f = in.lookup("filters");
-		filters = load_filters(f, s, r);
+		filters = load_filters(f, i, r);
 	}
 	catch(SettingNotFoundException & snfe) {
 	}
+
+	source *s = find_source(i);
 
 	if (format == "avi")
 #ifdef WITH_GWAVI
@@ -494,7 +498,7 @@ void load_http_servers(configuration_t *const cfg, instance_t *const ci, const S
 		std::vector<filter *> *http_filters = NULL;
 		try {
 			const Setting & f = server.lookup("filters");
-			http_filters = load_filters(f, s, r);
+			http_filters = load_filters(f, ci, r);
 		}
 		catch(SettingNotFoundException & snfe) {
 		}
@@ -786,7 +790,7 @@ int main(int argc, char *argv[])
 			std::vector<filter *> *filters = NULL;
 			try {
 				const Setting & f = o_vlb.lookup("filters");
-				filters = load_filters(f, s, r);
+				filters = load_filters(f, ci, r);
 			}
 			catch(SettingNotFoundException & snfe) {
 			}
@@ -835,7 +839,7 @@ int main(int argc, char *argv[])
 				std::vector<filter *> *filters_detection = NULL;
 				try {
 					const Setting & f = trigger.lookup("filters-detection");
-					filters_detection = load_filters(f, s, r);
+					filters_detection = load_filters(f, ci, r);
 				}
 				catch(SettingNotFoundException & snfe) {
 				}
@@ -855,7 +859,7 @@ int main(int argc, char *argv[])
 					for(size_t i=0; i<n_t; i++) {
 						const Setting & ct = t[i];
 
-						motion_targets -> push_back(load_target(ct, s, r));
+						motion_targets -> push_back(load_target(ct, ci, r));
 					}
 				}
 				catch(SettingNotFoundException & snfe) {
@@ -900,7 +904,7 @@ int main(int argc, char *argv[])
 			for(size_t i=0; i<n_t; i++) {
 				const Setting & ct = t[i];
 
-				interface *target = load_target(ct, s, r);
+				interface *target = load_target(ct, ci, r);
 				ci -> interfaces.push_back(target);
 			}
 		}

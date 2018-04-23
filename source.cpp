@@ -156,7 +156,7 @@ fail:
 		uint8_t *fail = (uint8_t *)valloc(bytes);
 		memset(fail, 0x80, bytes);
 
-		filter_add_text fat("Camera down since %c", center_center, this);
+		filter_add_text fat("Camera down since %c", center_center, NULL);
 		fat.apply(this -> ts, *width, *height, NULL, fail);
 
 		if (pe == E_RGB) {

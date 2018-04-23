@@ -45,6 +45,8 @@ class motion_trigger : public interface
 private:
 	source *s;
 
+	std::atomic_bool motion_triggered;
+
 	pthread_rwlock_t noise_level_lock;
 	int noise_level;
 
@@ -80,6 +82,8 @@ public:
 
 	json_t * get_rest_settable_parameters();
 	json_t * rest_set_parameter(const std::string & key, const std::string & value);
+
+	bool check_motion() { return motion_triggered; }
 
 	void operator()();
 };

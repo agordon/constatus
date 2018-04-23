@@ -26,6 +26,8 @@ motion_trigger::motion_trigger(const std::string & id, const std::string & descr
 	if (et)
 		et -> arg = et -> init_motion_trigger(et -> par.c_str());
 
+	motion_triggered = false;
+
 	local_stop_flag = false;
 	th = NULL;
 	ct = CT_MOTIONTRIGGER;
@@ -82,10 +84,11 @@ void motion_trigger::operator()()
 	uint64_t prev_ts = 0;
 
 	uint8_t *prev_frame = NULL;
-	bool motion = false;
 	int stopping = 0, mute = 0;
 
 	std::vector<frame_t> prerecord;
+
+	motion_triggered = false;
 
 	s -> register_user();
 
@@ -179,12 +182,14 @@ void motion_trigger::operator()()
 			else if (triggered) {
 				log(id, LL_INFO, "motion detected (%f%% of the pixels changed)", cnt * 100.0 / (w * h));
 
-				if (!motion) {
+				if (!motion_triggered) {
 					log(id, LL_DEBUG, " starting store");
 
 					struct timeval ets;
 					gettimeofday(&ets, NULL);
 					event_nr = get_db() -> register_event(id, EVT_MOTION, "FIXME", &ets);
+
+					motion_triggered = true;
 
 					std::vector<frame_t> *pr = new std::vector<frame_t>(prerecord);
 					prerecord.clear();
@@ -197,13 +202,11 @@ void motion_trigger::operator()()
 
 					if (!exec_start.empty())
 						exec(exec_start, "");
-
-					motion = true;
 				}
 
 				stopping = 0;
 			}
-			else if (motion) {
+			else if (motion_triggered) {
 				log(id, LL_DEBUG, "stop motion");
 				stopping++;
 
@@ -224,7 +227,7 @@ void motion_trigger::operator()()
 					if (!exec_end.empty())
 						exec(exec_end, "");
 
-					motion = false;
+					motion_triggered = false;
 
 					pthread_rwlock_rdlock(&ignore_n_frames_after_recording_lock);
 					mute = ignore_n_frames_after_recording;

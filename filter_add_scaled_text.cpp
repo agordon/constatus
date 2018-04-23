@@ -10,7 +10,7 @@
 #include "cairo.h"
 #include "utils.h"
 
-filter_add_scaled_text::filter_add_scaled_text(const std::string & what, const std::string & font_name, const int x, const int y, const int font_size, const int r, const int g, const int b, source *const s) : what(what), font_name(font_name), x(x), y(y), font_size(font_size), r(r), g(g), b(b), s(s)
+filter_add_scaled_text::filter_add_scaled_text(const std::string & what, const std::string & font_name, const int x, const int y, const int font_size, const int r, const int g, const int b, instance_t *const i) : what(what), font_name(font_name), x(x), y(y), font_size(font_size), r(r), g(g), b(b), i(i)
 {
 }
 
@@ -20,7 +20,7 @@ filter_add_scaled_text::~filter_add_scaled_text()
 
 void filter_add_scaled_text::apply_io(const uint64_t ts, const int w, const int h, const uint8_t *const prev, const uint8_t *const in, uint8_t *const out)
 {
-	std::string text_out = unescape(what, ts, s);
+	std::string text_out = unescape(what, ts, i);
 
 	uint32_t *temp = NULL;
 	cairo_surface_t *const cs = rgb_to_cairo(in, w, h, &temp);
