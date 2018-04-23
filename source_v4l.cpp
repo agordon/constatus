@@ -1,4 +1,4 @@
-// (C) 2017 by folkert van heusden, released under AGPL v3.0
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
@@ -149,7 +149,7 @@ bool source_v4l::try_v4l_configuration(int fd, int *width, int *height, unsigned
 
 	char buffer[5] = { 0 };
 	memcpy(buffer, &fmt.fmt.pix.pixelformat, 4);
-	log(LL_DEBUG, "available format: %dx%d %s", *width, *height, buffer);
+	log(id, LL_DEBUG, "available format: %dx%d %s", *width, *height, buffer);
 
 	if (fmt.fmt.pix.pixelformat != prev)
 		return false;
@@ -233,7 +233,7 @@ source_v4l::source_v4l(const std::string & id, const std::string & descr, const 
 
 	char buffer[5] = { 0 };
 	memcpy(buffer, &pixelformat, 4);
-	log(LL_INFO, "chosen: %dx%d %s", width, height, buffer);
+	log(id, LL_INFO, "chosen: %dx%d %s", width, height, buffer);
 
 	// set how we retrieve data (using mmaped thingy)
 	struct v4l2_requestbuffers req;
@@ -293,7 +293,7 @@ source_v4l::~source_v4l()
 
 void source_v4l::operator()()
 {
-	log(LL_INFO, "source v4l2 thread started");
+	log(id, LL_INFO, "source v4l2 thread started");
 
 	set_thread_name("src_v4l2");
 
@@ -311,7 +311,7 @@ void source_v4l::operator()()
 		time_t start_ts = get_us();
 
 		if (ioctl(fd, VIDIOC_DQBUF, &buf) == -1) {
-			log(LL_ERR, "VIDIOC_DQBUF failed: %s", strerror(errno));
+			log(id, LL_ERR, "VIDIOC_DQBUF failed: %s", strerror(errno));
 		}
 		else if (work_required() && !is_paused()) {
 			if (prefer_jpeg) {
@@ -357,5 +357,5 @@ void source_v4l::operator()()
 
 	free(conv_buffer);
 
-	log(LL_INFO, "source v4l2 thread terminating");
+	log(id, LL_INFO, "source v4l2 thread terminating");
 }

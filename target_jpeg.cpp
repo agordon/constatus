@@ -1,3 +1,4 @@
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include <unistd.h>
 
 #include "target_jpeg.h"
@@ -76,7 +77,7 @@ void target_jpeg::operator()()
 			is_start = false;
 		}
 
-		log(LL_DEBUG_VERBOSE, "Write frame to %s", name.c_str());
+		log(id, LL_DEBUG_VERBOSE, "Write frame to %s", name.c_str());
 		FILE *fh = fopen(name.c_str(), "wb");
 		if (!fh)
 			error_exit(true, "Cannot create file %s", name.c_str());

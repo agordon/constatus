@@ -1,4 +1,4 @@
-// (C) 2017 by folkert van heusden, released under AGPL v3.0
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include <algorithm>
 #include <atomic>
 #include <assert.h>
@@ -50,6 +50,84 @@ typedef struct {
 	std::string snapshot_dir;
 	std::vector<view *> *views;
 } http_thread_t;
+
+void send_mjpeg_view_stream(const int cfd, view *v, const double fps, const int quality, const bool get, const int time_limit, std::atomic_bool *const global_stopflag)
+{
+        const char reply_headers[] =
+                "HTTP/1.0 200 OK\r\n"
+                "Cache-Control: no-cache\r\n"
+                "Pragma: no-cache\r\n"
+		"Server: " NAME " " VERSION "\r\n"
+                "Expires: thu, 01 dec 1994 16:00:00 gmt\r\n"
+                "Connection: close\r\n"
+                "Content-Type: multipart/x-mixed-replace; boundary=--myboundary\r\n"
+                "\r\n";
+
+	if (WRITE(cfd, reply_headers, strlen(reply_headers)) <= 0)
+	{
+		log(LL_DEBUG, "short write on response header");
+		close(cfd);
+		return;
+	}
+
+	if (!get)
+	{
+		close(cfd);
+		return;
+	}
+
+	bool first = true;
+
+	uint64_t prev = 0;
+	time_t end = time(NULL) + time_limit;
+	for(;(time_limit <= 0 || time(NULL) < end) && !*global_stopflag;)
+	{
+		int w = -1, h = -1;
+		uint8_t *work = NULL;
+		size_t work_len = 0;
+		v -> get_frame(E_JPEG, quality, &prev, &w, &h, &work, &work_len);
+
+		// send header
+                const char term[] = "\r\n";
+                if (first)
+                        first = false;
+                else if (WRITE(cfd, term, strlen(term)) <= 0)
+		{
+			log(LL_DEBUG, "short write on terminating cr/lf");
+			free(work);
+                        break;
+		}
+
+		char img_h[4096] = { 0 };
+		int len = snprintf(img_h, sizeof img_h, 
+			"--myboundary\r\n"
+			"Content-Type: image/jpeg\r\n"
+			"Content-Length: %zu\r\n"
+			"\r\n", work_len);
+		if (WRITE(cfd, img_h, len) <= 0)
+		{
+			log(LL_DEBUG, "short write on boundary header");
+			free(work);
+			break;
+		}
+
+		if (WRITE(cfd, reinterpret_cast<char *>(work), work_len) <= 0)
+		{
+			log(LL_DEBUG, "short write on img data");
+			free(work);
+			break;
+		}
+
+		free(work);
+
+		// FIXME adapt this by how long the wait_for_frame took
+		if (fps > 0) {
+			double us = 1000000.0 / fps;
+			if (us)
+				usleep((useconds_t)us);
+		}
+	}
+}
 
 void send_mjpeg_stream(int cfd, source *s, double fps, int quality, bool get, int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h)
 {
@@ -434,7 +512,7 @@ void send_jpg_frame(int cfd, source *s, bool get, int quality, const std::vector
 
 std::string describe_interface(const instance_t *const inst, const interface *const i)
 {
-	unsigned long inst_hash = hash(inst -> name);
+	std::string inst_url = url_escape(inst -> name);
 
 	std::string module_int = i -> get_id();
 
@@ -468,98 +546,23 @@ std::string describe_interface(const instance_t *const inst, const interface *co
 	std::string out = std::string("<div id=\"") + div + "\"><h2>" + type + "</h2><p>description: " + i -> get_descr() + "<br>type: " + type + "</p><ul>";
 
 	if (i -> is_paused()) {
-		out += myformat("<li><a href=\"unpause?inst=%lx&module=%s\">unpause</a>", inst_hash, module_int.c_str());
+		out += myformat("<li><a href=\"unpause?inst=%s&module=%s\">unpause</a>", inst_url.c_str(), module_int.c_str());
 	}
 	else {
-		out += myformat("<li><a href=\"pause?inst=%lx&module=%s\">pause</a>", inst_hash, module_int.c_str());
+		out += myformat("<li><a href=\"pause?inst=%s&module=%s\">pause</a>", inst_url.c_str(), module_int.c_str());
 	}
 
 	if (i -> is_running()) {
-		out += myformat("<li><a href=\"stop?inst=%lx&module=%s\">stop</a>", inst_hash, module_int.c_str());
+		out += myformat("<li><a href=\"stop?inst=%s&module=%s\">stop</a>", inst_url.c_str(), module_int.c_str());
 	}
 	else {
-		out += myformat("<li><a href=\"start?inst=%lx&module=%s\">start</a>", inst_hash, module_int.c_str());
+		out += myformat("<li><a href=\"start?inst=%s&module=%s\">start</a>", inst_url.c_str(), module_int.c_str());
 	}
-	out += myformat("<li><a href=\"restart?inst=%lx&module=%s\">restart</a>", inst_hash, module_int.c_str());
+	out += myformat("<li><a href=\"restart?inst=%s&module=%s\">restart</a>", inst_url.c_str(), module_int.c_str());
 
 	out += "</ul></div>";
 
 	return out;
-}
-
-void find_by_id(const configuration_t *const cfg, const std::string & id, instance_t **inst, interface **i)
-{
-	*inst = NULL;
-	*i = NULL;
-
-	for(instance_t * cur_inst : cfg -> instances) {
-		for(interface *cur_i : cur_inst -> interfaces) {
-			if (cur_i -> get_id() == id) {
-				*inst = cur_inst;
-				*i = cur_i;
-			}
-		}
-	}
-}
-
-source *find_source(instance_t *const inst)
-{
-	for(interface *i : inst -> interfaces) {
-		if (i -> get_class_type() == CT_SOURCE)
-			return (source *)i;
-	}
-
-	return NULL;
-}
-
-instance_t *find_instance_by_interface(const configuration_t *const cfg, const interface *i_f)
-{
-	for(instance_t * inst : cfg -> instances) {
-		for(interface *cur : inst -> interfaces) {
-			if (cur == i_f)
-				return inst;
-		}
-	}
-
-	return NULL;
-}
-
-instance_t *find_instance_by_name_hash(const configuration_t *const cfg, const std::string & hashed_name)
-{
-	for(instance_t * inst : cfg -> instances) {
-		std::string cur = myformat("%lx", hash(inst -> name));
-
-		if (cur == hashed_name)
-			return inst;
-	}
-
-	return NULL;
-}
-
-interface *find_by_id(instance_t *const inst, const std::string & id)
-{
-	if (!inst)
-		return NULL;
-
-	for(interface *i : inst -> interfaces) {
-		std::string id_int = i -> get_id();
-
-		if (id == id_int)
-			return i;
-	}
-
-	return NULL;
-}
-
-interface *find_by_id(configuration_t *const cfg, const std::string & id)
-{
-	for(instance_t * inst : cfg -> instances) {
-		interface *i = find_by_id(inst, id);
-		if (i)
-			return i;
-	}
-
-	return NULL;
 }
 
 bool pause(instance_t *const cfg, const std::string & which, const bool p)
@@ -1035,9 +1038,9 @@ std::string http_server::mjpeg_stream_url(configuration_t *const cfg, const std:
 	find_by_id(cfg, id, &inst, &i);
 
 	if (!inst)
-		return "?";
+		return "id not found";
 
-	return myformat("stream.mjpeg?inst=%lx", hash(inst -> name)); 
+	return myformat("stream.mjpeg?inst=%s", url_escape(inst -> name).c_str()); 
 }
 
 view *find_view(std::vector<view *> *const views, const std::string & id)
@@ -1173,7 +1176,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 				auto inst_it = pars.find("inst");
 
 				if (inst_it != pars.end())
-					inst = find_instance_by_name_hash(cfg, inst_it -> second);
+					inst = find_instance_by_name(cfg, inst_it -> second);
 			}
 		}
 	}
@@ -1182,7 +1185,8 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	if (s)
 		s -> register_user();
 
-	const std::string cur_hash = inst ? myformat("?inst=%lx", hash(inst -> name)) : "";
+	// iup = instance url parameter
+	const std::string iup = inst ? myformat("?inst=%s", url_escape(inst -> name).c_str()) : "";
 
 	//if (inst)
 	//printf("%s\n", inst -> name.c_str());
@@ -1191,6 +1195,17 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 
 	if ((path == NULL || strcmp(path, "stream.mjpeg") == 0 || motion_compatible) && s)
 		send_mjpeg_stream(cfd, s, fps, quality, get, time_limit, filters, global_stopflag, r, resize_w, resize_h);
+	else if (strcmp(path, "view-proxy") == 0 && views) {
+		auto view_it = pars.find("id");
+		std::string id;
+
+		if (view_it != pars.end())
+			id = view_it -> second;
+
+		view *v = find_view(views, id);
+
+		send_mjpeg_view_stream(cfd, v, fps, quality, get, time_limit, global_stopflag);
+	}
 	else if (strcmp(path, "stream.mpng") == 0 && s)
 		send_mpng_stream(cfd, s, fps, get, time_limit, filters, global_stopflag, r, resize_w, resize_h);
 	else if (strcmp(path, "image.png") == 0 && s)
@@ -1210,7 +1225,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	}
 	else if (strcmp(path, "stream.html") == 0)
 	{
-		std::string reply = http_200_header + page_header + myformat("<img src=\"stream.mjpeg%s\">", cur_hash.c_str()) + html_tail;
+		std::string reply = http_200_header + page_header + myformat("<img src=\"stream.mjpeg%s\">", iup.c_str()) + html_tail;
 
 		if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
 			log(LL_DEBUG, "short write on response header");
@@ -1226,11 +1241,11 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 						"<li><a href=\"stream.html%s\">Same MJPEG stream but in a HTML wrapper</a>"
 						"<li><a href=\"stream.mpng%s\">MPNG stream</a>"
 						"<li><a href=\"image.jpg%s\">Show snapshot in JPG format</a>"
-						"<li><a href=\"image.png%s\">Show snapshot in PNG format</a>", cur_hash.c_str(), cur_hash.c_str(), cur_hash.c_str(), cur_hash.c_str(), cur_hash.c_str());
+						"<li><a href=\"image.png%s\">Show snapshot in PNG format</a>", iup.c_str(), iup.c_str(), iup.c_str(), iup.c_str(), iup.c_str());
 
 			if (allow_admin) {
 				reply += myformat("<li><a href=\"snapshot-img/%s\">Take a snapshot and store it on disk</a>"
-						"<li><a href=\"snapshot-video/%s\">Start a video recording</a>", cur_hash.c_str(), cur_hash.c_str());
+						"<li><a href=\"snapshot-video/%s\">Start a video recording</a>", iup.c_str(), iup.c_str());
 			}
 
 			if (archive_acces) {
@@ -1250,36 +1265,22 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 			reply += html_tail; 
 		}
 		else {
-			reply = http_200_header + page_header + "<div class=\"vidmain\">"
-				"<ul><li><a href=\"view-all.html\">view all, live video</a><br><br>";
+			reply = http_200_header + page_header + "<h2>views</h2>";
 
-			reply += "<li>static frames:<br>";
-			for(instance_t * inst : cfg -> instances)
-				reply += myformat("<div class=\"vid\"><p><a href=\"index.html?inst=%lx\">%s</p><img src=\"image.jpg?inst=%lx\" width=320 height=240></a></div>", hash(inst -> name), inst -> name.c_str(), hash(inst -> name));
+			if (!views || views -> empty())
+				reply += "<b>No view defined</b>";
+			else {
+				reply += "<ul>";
 
-			reply += "</ul></div>";
+				for(view *cv : *views) 
+					reply += myformat("<li><a href=\"view-view?id=%s\">%s</a>", cv -> get_id().c_str(), (cv -> get_descr().empty() ? cv -> get_id() : cv -> get_descr()).c_str());
+
+				reply += "</ul>";
+			}
 		}
 
 		if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
 			log(LL_DEBUG, "short write on response header");
-	}
-	else if (strcmp(path, "view-all.html") == 0)
-	{
-		std::string reply = http_200_header + page_header + "<div class=\"vidmain\">";
-
-		for(instance_t * inst : cfg -> instances) {
-			source *const s = find_source(inst);
-
-			int w = s -> get_width();
-			int use_h = s -> get_height() * (320.0 / w);
-
-			reply += myformat("<div class=\"vid\"><p><a href=\"index.html?inst=%lx\">%s</p><img src=\"stream.mjpeg?inst=%lx\" width=320 height=%d></a></div>", hash(inst -> name), inst -> name.c_str(), hash(inst -> name), use_h);
-		}
-
-		reply += "</div>";
-
-		if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
-			log(LL_DEBUG, "short write on response");
 	}
 	else if ((strncmp(path, "view-snapshots/send-file", 24) == 0 || strncmp(path, "send-file", 9) == 0) && (archive_acces || allow_admin)) {
 		auto file_it = pars.find("file");
@@ -1302,7 +1303,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 				log(LL_DEBUG, "short write on response header");
 		}
 	}
-	else if (strcmp(path, "view-view") == 0) {
+	else if (strcmp(path, "view-view") == 0 && views) {
 		auto view_it = pars.find("id");
 		std::string id;
 
@@ -1553,7 +1554,7 @@ void http_server::operator()()
 		if (cfd == -1)
 			continue;
 
-		log(LL_INFO, "HTTP connected with: %s", get_endpoint_name(cfd).c_str());
+		log(id, LL_INFO, "HTTP connected with: %s", get_endpoint_name(cfd).c_str());
 
 		http_thread_t *ct = new http_thread_t;
 
@@ -1589,5 +1590,5 @@ void http_server::operator()()
 	for(size_t i=0; i<handles.size(); i++)
 		pthread_join(handles.at(i), NULL);
 
-	log(LL_INFO, "HTTP server thread terminating");
+	log(id, LL_INFO, "HTTP server thread terminating");
 }

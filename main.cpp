@@ -1,4 +1,4 @@
-// (C) 2017 by folkert van heusden, released under AGPL v3.0
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include <dlfcn.h>
 #include <libconfig.h++>
 #include <set>
@@ -54,7 +54,9 @@ using namespace libconfig;
 #include "filter_motion_only.h"
 #include "selection_mask.h"
 #include "cleaner.h"
-#include "view.h"
+#include "view_html_grid.h"
+#include "view_ss.h"
+#include "view_all.h"
 
 std::string cfg_str(const Config & cfg, const char *const key, const char *descr, const bool optional, const std::string & def)
 {
@@ -421,9 +423,6 @@ view * load_view(configuration_t *const cfg, const Setting & in)
 
 	const std::string type = cfg_str(in, "type", "type: html-grid", false, "html-grid");
 
-	if (type != "html-grid")
-		error_exit(false, "Currently only \"html-grid\" (for views, id %s) is supported", id.c_str());
-
 	std::vector<std::string> ids;
 	const Setting & s_ids = in.lookup("sources");
 	size_t n_ids = s_ids.getLength();
@@ -436,7 +435,28 @@ view * load_view(configuration_t *const cfg, const Setting & in)
 	int gwidth = cfg_int(in, "grid-width", "number of columns", true, -1);
 	int gheight = cfg_int(in, "grid-height", "number of rows", true, -1);
 
-	return new view(cfg, id, descr, width, height, ids, gwidth, gheight);
+	double interval = cfg_float(in, "switch-interval", "when to switch source", true, 5.0);
+
+	view *v = NULL;
+
+	if (type == "html-grid")
+		v = new view_html_grid(cfg, id, descr, width, height, ids, gwidth, gheight);
+	else if (type == "source-switch")
+		v = new view_ss(cfg, id, descr, width, height, ids, interval);
+	else if (type == "all") {
+		ids.clear();
+
+		for(instance_t * cur_inst : cfg -> instances) {
+			source *s = find_source(cur_inst);
+			ids.push_back(s -> get_id());
+		}
+
+		v = new view_all(cfg, id, descr, ids);
+	}
+	else
+		error_exit(false, "Currently only \"html-grid\" and \"source-switch\" (for views, id %s) are supported", id.c_str());
+
+	return v;
 }
 
 void load_http_servers(configuration_t *const cfg, instance_t *const ci, const Setting & hs, const bool local_instance, source *const s, resize *const r, std::vector<view *> *const views)
@@ -493,7 +513,7 @@ void load_http_servers(configuration_t *const cfg, instance_t *const ci, const S
 void version()
 {
 	printf(NAME " " VERSION "\n");
-	printf("(C) 2017-2018 by Folkert van Heusden\n\n");
+	printf("(C) 2017-2018-2018 by Folkert van Heusden\n\n");
 }
 
 void help()

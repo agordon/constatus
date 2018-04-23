@@ -1,3 +1,4 @@
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include "target.h"
 
 class target_vnc : public target

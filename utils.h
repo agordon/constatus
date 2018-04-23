@@ -1,4 +1,4 @@
-// (C) 2017 by folkert van heusden, released under AGPL v3.0
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include <atomic>
 #include <string>
 #include <vector>
@@ -19,6 +19,7 @@ std::string get_thread_name();
 void mysleep(double slp, std::atomic_bool *const stop_flag, source *const s);
 void *find_symbol(void *library, const char *const symbol, const char *const what, const char *const library_name);
 char * un_url_escape(const char *const in);
+std::string url_escape(const std::string & in);
 std::vector<std::string> * split(std::string in, std::string splitter);
 std::string myctime(const time_t t);
 std::string search_replace(const std::string & in, const std::string & search, const std::string & replace);

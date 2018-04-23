@@ -1,4 +1,4 @@
-// (C) 2017 by folkert van heusden, released under AGPL v3.0
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include <string>
 
 void exec(const std::string & what, const std::string & parameter);

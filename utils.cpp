@@ -1,4 +1,4 @@
-// (C) 2017 by folkert van heusden, released under AGPL v3.0
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include <algorithm>
 #include <assert.h>
 #include <atomic>
@@ -290,6 +290,21 @@ char * un_url_escape(const char *const in)
 
 	char *temp = curl_easy_unescape(ch, in, 0, NULL);
 	char *out = strdup(temp);
+
+	curl_free(temp);
+	curl_easy_cleanup(ch);
+
+	return out;
+}
+
+std::string url_escape(const std::string & in)
+{
+	CURL *ch = curl_easy_init();
+	if (!ch)
+		error_exit(false, "Failed to initialize CURL session");
+
+	char *temp = curl_easy_escape(ch, in.c_str(), in.size());
+	std::string out = temp;
 
 	curl_free(temp);
 	curl_easy_cleanup(ch);

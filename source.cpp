@@ -1,4 +1,4 @@
-// (C) 2017 by folkert van heusden, released under AGPL v3.0
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include <errno.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -133,7 +133,7 @@ bool source::get_frame(const encoding_t pe, const int jpeg_quality, uint64_t *ts
 
 	if (err || (!frame_rgb && !frame_jpeg)) {
 fail:
-		log(LL_INFO, "frame fail %d %d %d | %ld %ld", err, frame_rgb, frame_jpeg, this -> ts, *ts);
+		log(id, LL_INFO, "frame fail %d %p %p | %ld %ld | %ld", err, frame_rgb, frame_jpeg, this -> ts, *ts, this -> ts - *ts);
 
 		if (this -> width <= 0) {
 			if (this -> resize_w != -1) {

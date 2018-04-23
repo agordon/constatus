@@ -1,4 +1,4 @@
-// (C) 2017 by folkert van heusden, released under AGPL v3.0
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include <dlfcn.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -38,7 +38,7 @@ source_plugin::~source_plugin()
 
 void source_plugin::operator()()
 {
-	log(LL_INFO, "source plugins thread started");
+	log(id, LL_INFO, "source plugins thread started");
 
 	set_thread_name("src_plugins");
 
@@ -46,5 +46,5 @@ void source_plugin::operator()()
 	for(;!local_stop_flag;)
 		usleep(101000);
 
-	log(LL_INFO, "source plugins thread terminating");
+	log(id, LL_INFO, "source plugins thread terminating");
 }

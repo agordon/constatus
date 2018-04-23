@@ -1,3 +1,4 @@
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include "config.h"
 
 #include <algorithm>
@@ -1180,5 +1181,5 @@ void target_vnc::operator()()
 	for(size_t i=0; i<handles.size(); i++)
 		pthread_join(handles.at(i), NULL);
 
-	log(LL_INFO, "VNC server thread terminating");
+	log(id, LL_INFO, "VNC server thread terminating");
 }

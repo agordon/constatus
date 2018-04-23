@@ -1,4 +1,4 @@
-// (C) 2017 by folkert van heusden, released under AGPL v3.0
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,7 +20,7 @@ void setlogfile(const char *const file, const int ll)
 	loglevel = ll;
 }
 
-void _log(const int ll, const char *const what, va_list args)
+void _log(const std::string & id, const int ll, const char *const what, va_list args)
 {
 	if (ll > loglevel)
 		return;
@@ -58,11 +58,10 @@ void _log(const int ll, const char *const what, va_list args)
 	}
 
 	char *temp = NULL;
-	asprintf(&temp, "%04d-%02d-%02d %02d:%02d:%02d.%06ld %5s %9s %s", 
+	asprintf(&temp, "%04d-%02d-%02d %02d:%02d:%02d.%06ld %5s %9s %s %s", 
 			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
 			tm.tm_hour, tm.tm_min, tm.tm_sec, tv.tv_usec,
-			lls,
-			get_thread_name().c_str(),
+			lls, get_thread_name().c_str(), id.c_str(),
 			msg);
 	free(msg);
 
@@ -84,7 +83,7 @@ void log(const int ll, const std::string & what, ...)
 	va_list ap;
 	va_start(ap, what);
 
-	_log(ll, what.c_str(), ap);
+	_log("", ll, what.c_str(), ap);
 
 	va_end(ap);
 }
@@ -94,7 +93,17 @@ void log(const int ll, const char *const what, ...)
 	va_list ap;
 	va_start(ap, what);
 
-	_log(ll, what, ap);
+	_log("", ll, what, ap);
+
+	va_end(ap);
+}
+
+void log(const std::string & id, const int ll, const char *const what, ...)
+{
+	va_list ap;
+	va_start(ap, what);
+
+	_log(id, ll, what, ap);
 
 	va_end(ap);
 }

@@ -1,4 +1,4 @@
-// (C) 2017 by folkert van heusden, released under AGPL v3.0
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include <string>
 #include <curl/curl.h>
 
@@ -11,5 +11,6 @@
 
 void setlogfile(const char *const other, const int loglevel);
 void log(const int loglevel, const char *const what, ...);
+void log(const std::string & id, const int loglevel, const char *const what, ...);
 void log(const int loglevel, const std::string & what, ...);
 int curl_log(CURL *handle, curl_infotype type, char *data, size_t size, void *userp);

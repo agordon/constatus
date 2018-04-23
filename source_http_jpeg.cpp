@@ -1,4 +1,4 @@
-// (C) 2017 by folkert van heusden, released under AGPL v3.0
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include <stdio.h>
 #include <unistd.h>
 
@@ -24,7 +24,7 @@ source_http_jpeg::~source_http_jpeg()
 
 void source_http_jpeg::operator()()
 {
-	log(LL_INFO, "source http jpeg thread started");
+	log(id, LL_INFO, "source http jpeg thread started");
 
 	set_thread_name("src_h_jpeg");
 
@@ -42,7 +42,7 @@ void source_http_jpeg::operator()()
 
 		if (!http_get(url, ignore_cert, auth.empty() ? NULL : auth.c_str(), loglevel == LL_DEBUG_VERBOSE, &work, &work_len, &local_stop_flag))
 		{
-			log(LL_INFO, "did not get a frame");
+			log(id, LL_INFO, "did not get a frame");
 			usleep(backoff);
 
 			if (backoff <= 2000000)
@@ -57,7 +57,7 @@ void source_http_jpeg::operator()()
 			int dw = -1, dh = -1;
 			if (first || resize) {
 				if (!read_JPEG_memory(work, work_len, &dw, &dh, &temp)) {
-					log(LL_INFO, "JPEG decode error");
+					log(id, LL_INFO, "JPEG decode error");
 					continue;
 				}
 
@@ -90,5 +90,5 @@ void source_http_jpeg::operator()()
 			usleep(left);
 	}
 
-	log(LL_INFO, "source http jpeg thread terminating");
+	log(id, LL_INFO, "source http jpeg thread terminating");
 }

@@ -1,3 +1,4 @@
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 // with code from https://stackoverflow.com/questions/39536746/ffmpeg-leak-while-reading-image-files
 #include <atomic>
 #include <string>
@@ -42,7 +43,7 @@ void my_log_callback(void *ptr, int level, const char *fmt, va_list vargs)
 		if (lf)
 			*lf = ' ';
 
-		log(LL_DEBUG, buffer);
+		log(LL_DEBUG, buffer); // FIXME id
 
 		free(buffer);
 	}
@@ -50,7 +51,7 @@ void my_log_callback(void *ptr, int level, const char *fmt, va_list vargs)
 
 void source_stream::operator()()
 {
-	log(LL_INFO, "source rtsp thread started");
+	log(id, LL_INFO, "source rtsp thread started");
 
 	set_thread_name("src_stream");
 
@@ -115,21 +116,21 @@ void source_stream::operator()()
 			char err_buffer[4096];
 			av_strerror(err, err_buffer, sizeof err_buffer);
 
-			log(LL_ERR, "Cannot open %s (%s (%d))", url.c_str(), err_buffer, err);
+			log(id, LL_ERR, "Cannot open %s (%s (%d))", url.c_str(), err_buffer, err);
 			goto fail;
 		}
 
 		av_dict_free(&opts);
 
 		if (avformat_find_stream_info(format_ctx, NULL) < 0) {
-			log(LL_ERR, "avformat_find_stream_info failed (rtsp)");
+			log(id, LL_ERR, "avformat_find_stream_info failed (rtsp)");
 			goto fail;
 		}
 
 		// search video stream
 		video_stream_index = av_find_best_stream(format_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
 		if (video_stream_index == -1) {
-			log(LL_ERR, "No video stream in rstp feed");
+			log(id, LL_ERR, "No video stream in rstp feed");
 			goto fail;
 		}
 
@@ -141,7 +142,7 @@ void source_stream::operator()()
 		// Get the codec
 		codec = avcodec_find_decoder(format_ctx->streams[video_stream_index]->codecpar->codec_id);
 		if (!codec) {
-			log(LL_ERR, "Decoder not found (rtsp)");
+			log(id, LL_ERR, "Decoder not found (rtsp)");
 			goto fail;
 		}
 
@@ -151,7 +152,7 @@ void source_stream::operator()()
 		avcodec_parameters_to_context(codec_ctx, format_ctx->streams[video_stream_index]->codecpar);
 
 		if (avcodec_open2(codec_ctx, codec, NULL) < 0) {
-			log(LL_ERR, "avcodec_open2 failed");
+			log(id, LL_ERR, "avcodec_open2 failed");
 			goto fail;
 		}
 		///////////
@@ -164,10 +165,10 @@ void source_stream::operator()()
 			width = codec_ctx -> width;
 			height = codec_ctx -> height;
 
-			log(LL_INFO, "Resolution: %dx%d", width, height);
+			log(id, LL_INFO, "Resolution: %dx%d", width, height);
 
 			if (width <= 0 || height <= 0) {
-				log(LL_ERR, "Invalid resolution");
+				log(id, LL_ERR, "Invalid resolution");
 				goto fail;
 			}
 		}
@@ -190,7 +191,7 @@ void source_stream::operator()()
 		while(!local_stop_flag && av_read_frame(format_ctx, &packet) >= 0) {
 			if (packet.stream_index == video_stream_index) {    //packet is video
 				if (stream == NULL) {    //create stream in file
-					log(LL_DEBUG, "Create stream");
+					log(id, LL_DEBUG, "Create stream");
 
 					stream = avformat_new_stream(output_ctx, NULL);
 
@@ -202,13 +203,13 @@ void source_stream::operator()()
 				packet.stream_index = stream->id;
 
 				if (avcodec_send_packet(codec_ctx, &packet) < 0) {
-					log(LL_INFO, "rtsp error");
+					log(id, LL_INFO, "rtsp error");
 					goto fail;
 				}
 
 				int result = avcodec_receive_frame(codec_ctx, picture);
 				if (result < 0 && result != AVERROR(EAGAIN) && result != AVERROR_EOF) {
-					log(LL_INFO, "rtsp error %d", result);
+					log(id, LL_INFO, "rtsp error %d", result);
 					goto fail;
 				}
 
@@ -272,5 +273,5 @@ void source_stream::operator()()
 		usleep(101000);
 	}
 
-	log(LL_INFO, "source rtsp thread terminating");
+	log(id, LL_INFO, "source rtsp thread terminating");
 }

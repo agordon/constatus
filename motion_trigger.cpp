@@ -1,4 +1,4 @@
-// (C) 2017 by folkert van heusden, released under AGPL v3.0
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include <atomic>
 #include <errno.h>
 #include <pthread.h>
@@ -90,10 +90,10 @@ void motion_trigger::operator()()
 	s -> register_user();
 
 	if (camera_warm_up)
-		log(LL_INFO, "Warming up...");
+		log(id, LL_INFO, "Warming up...");
 
 	for(int i=0; i<camera_warm_up && !local_stop_flag; i++) {
-		log(LL_DEBUG, "Warm-up... %d", i);
+		log(id, LL_DEBUG, "Warm-up... %d", i);
 
 		uint8_t *frame = NULL;
 		size_t frame_len = 0;
@@ -102,7 +102,7 @@ void motion_trigger::operator()()
 		free(frame);
 	}
 
-	log(LL_INFO, "Go!");
+	log(id, LL_INFO, "Go!");
 
 	unsigned long event_nr = -1;
 	for(;!local_stop_flag;) {
@@ -173,14 +173,14 @@ void motion_trigger::operator()()
 			get_meta() -> set_double("$pixels-changed$", std::pair<uint64_t, double>(0, cnt * 100.0 / (w * h)));
 
 			if (mute) {
-				log(LL_DEBUG, "mute");
+				log(id, LL_DEBUG, "mute");
 				mute--;
 			}
 			else if (triggered) {
-				log(LL_INFO, "motion detected (%f%% of the pixels changed)", cnt * 100.0 / (w * h));
+				log(id, LL_INFO, "motion detected (%f%% of the pixels changed)", cnt * 100.0 / (w * h));
 
 				if (!motion) {
-					log(LL_DEBUG, " starting store");
+					log(id, LL_DEBUG, " starting store");
 
 					struct timeval ets;
 					gettimeofday(&ets, NULL);
@@ -204,7 +204,7 @@ void motion_trigger::operator()()
 				stopping = 0;
 			}
 			else if (motion) {
-				log(LL_DEBUG, "stop motion");
+				log(id, LL_DEBUG, "stop motion");
 				stopping++;
 
 				pthread_rwlock_rdlock(&keep_recording_n_frames_lock);
@@ -212,7 +212,7 @@ void motion_trigger::operator()()
 				pthread_rwlock_unlock(&keep_recording_n_frames_lock);
 
 				if (stopping > temp) {
-					log(LL_INFO, " stopping (%ld)", event_nr);
+					log(id, LL_INFO, " stopping (%ld)", event_nr);
 
 					struct timeval ete;
 					gettimeofday(&ete, NULL);

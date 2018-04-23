@@ -1,3 +1,4 @@
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include <unistd.h>
 
 extern "C" {
@@ -205,7 +206,7 @@ static AVFrame *alloc_audio_frame(enum AVSampleFormat sample_fmt,
 	int ret;
 
 	if (!frame) {
-		log(LL_ERR, "Error allocating an audio frame\n");
+		log(id, LL_ERR, "Error allocating an audio frame\n");
 		return NULL;
 	}
 
@@ -217,7 +218,7 @@ static AVFrame *alloc_audio_frame(enum AVSampleFormat sample_fmt,
 	if (nb_samples) {
 		ret = av_frame_get_buffer(frame, 0);
 		if (ret < 0) {
-			log(LL_ERR, "Error allocating an audio buffer\n");
+			log(id, LL_ERR, "Error allocating an audio buffer\n");
 			av_frame_free(&frame);
 			return NULL;
 		}
@@ -240,7 +241,7 @@ static void open_audio(AVFormatContext *oc, AVCodec *codec, OutputStream *ost, A
 	ret = avcodec_open2(c, codec, &opt);
 	av_dict_free(&opt);
 	if (ret < 0) {
-		log(LL_ERR, "Can't open audio codec: %s", my_av_err2str(ret).c_str());
+		log(id, LL_ERR, "Can't open audio codec: %s", my_av_err2str(ret).c_str());
 		exit(1);
 	}
 
@@ -263,14 +264,14 @@ static void open_audio(AVFormatContext *oc, AVCodec *codec, OutputStream *ost, A
 	/* copy the stream parameters to the muxer */
 	ret = avcodec_parameters_from_context(ost->st->codecpar, c);
 	if (ret < 0) {
-		log(LL_ERR, "Can't copy the stream parameters");
+		log(id, LL_ERR, "Can't copy the stream parameters");
 		exit(1);
 	}
 
 	/* create resampler context */
 	ost->swr_ctx = swr_alloc();
 	if (!ost->swr_ctx) {
-		log(LL_ERR, "Can't allocate resampler context");
+		log(id, LL_ERR, "Can't allocate resampler context");
 		exit(1);
 	}
 
@@ -284,7 +285,7 @@ static void open_audio(AVFormatContext *oc, AVCodec *codec, OutputStream *ost, A
 
 	/* initialize the resampling context */
 	if ((ret = swr_init(ost->swr_ctx)) < 0) {
-		log(LL_ERR, "Failed to initialize the resampling context\n");
+		log(id, LL_ERR, "Failed to initialize the resampling context\n");
 		exit(1);
 	}
 }
@@ -354,7 +355,7 @@ static int write_audio_frame(AVFormatContext *oc, OutputStream *ost)
 				ost->frame->data, dst_nb_samples,
 				(const uint8_t **)frame->data, frame->nb_samples);
 		if (ret < 0) {
-			log(LL_ERR, "Error while converting\n");
+			log(id, LL_ERR, "Error while converting\n");
 			exit(1);
 		}
 		frame = ost->frame;
@@ -365,14 +366,14 @@ static int write_audio_frame(AVFormatContext *oc, OutputStream *ost)
 
 	ret = avcodec_encode_audio2(c, &pkt, frame, &got_packet);
 	if (ret < 0) {
-		log(LL_ERR, "Error encoding audio frame: %s", my_av_err2str(ret).c_str());
+		log(id, LL_ERR, "Error encoding audio frame: %s", my_av_err2str(ret).c_str());
 		exit(1);
 	}
 
 	if (got_packet) {
 		ret = write_frame(oc, &c->time_base, ost->st, &pkt);
 		if (ret < 0) {
-			log(LL_ERR, "Error while writing audio frame: %s", my_av_err2str(ret).c_str());
+			log(id, LL_ERR, "Error while writing audio frame: %s", my_av_err2str(ret).c_str());
 			exit(1);
 		}
 	}
@@ -658,7 +659,7 @@ void target_ffmpeg::operator()()
 		if (!(fmt->flags & AVFMT_NOFILE)) {
 			ret = avio_open(&oc->pb, name.c_str(), AVIO_FLAG_WRITE);
 			if (ret < 0) {
-				log(LL_ERR, "Can't open '%s': %s", name.c_str(), my_av_err2str(ret).c_str());
+				log(id, LL_ERR, "Can't open '%s': %s", name.c_str(), my_av_err2str(ret).c_str());
 				break;
 			}
 		}
@@ -666,7 +667,7 @@ void target_ffmpeg::operator()()
 		/* Write the stream header, if any. */
 		ret = avformat_write_header(oc, &opt);
 		if (ret < 0) {
-			log(LL_ERR, "Error occurred when opening output file: %s", my_av_err2str(ret).c_str());
+			log(id, LL_ERR, "Error occurred when opening output file: %s", my_av_err2str(ret).c_str());
 			break;
 		}
 

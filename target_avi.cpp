@@ -1,3 +1,4 @@
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include "config.h"
 #ifdef WITH_GWAVI
 extern "C" {
@@ -49,7 +50,7 @@ void target_avi::operator()()
 		s -> get_frame(filters -> empty() ? E_JPEG : E_RGB, quality, &prev_ts, &w, &h, &work, &work_len);
 
 		if (max_time > 0 && time(NULL) >= cut_ts) {
-			log(LL_DEBUG, "new file");
+			log(id, LL_DEBUG, "new file");
 
 			if (gwavi)
 				gwavi_close(gwavi);
@@ -78,7 +79,7 @@ void target_avi::operator()()
 				error_exit(true, "Cannot create %s", name.c_str());
 
 			if (pre_record) {
-				log(LL_DEBUG_VERBOSE, "Write pre-recorded frames");
+				log(id, LL_DEBUG_VERBOSE, "Write pre-recorded frames");
 
 				for(frame_t pair : *pre_record) {
 					if (pair.e == E_JPEG)
@@ -101,7 +102,7 @@ void target_avi::operator()()
 			}
 		}
 
-		log(LL_DEBUG_VERBOSE, "Write frame");
+		log(id, LL_DEBUG_VERBOSE, "Write frame");
 		if (filters -> empty())
 			gwavi_add_frame(gwavi, work, work_len);
 		else {

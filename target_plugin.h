@@ -1,3 +1,4 @@
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include "target.h"
 
 typedef void *(* tp_init_plugin_t)(const char *const argument);

@@ -1,3 +1,4 @@
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include <unistd.h>
 
 #include "target_plugin.h"
@@ -43,7 +44,7 @@ void target_plugin::operator()()
 		s -> get_frame(E_RGB, quality, &prev_ts, &w, &h, &work, &work_len);
 
 		if (max_time > 0 && time(NULL) >= cut_ts) {
-			log(LL_DEBUG, "new file");
+			log(id, LL_DEBUG, "new file");
 
 			sp -> close_file(sp -> arg);
 			is_open = false;
@@ -66,7 +67,7 @@ void target_plugin::operator()()
 			}
 
 			if (pre_record) {
-				log(LL_DEBUG_VERBOSE, "Write pre-recorded frames");
+				log(id, LL_DEBUG_VERBOSE, "Write pre-recorded frames");
 				for(frame_t pair : *pre_record) {
 					sp -> write_frame(sp -> arg, pair.ts, w, h, prev_frame, pair.data);
 
@@ -80,7 +81,7 @@ void target_plugin::operator()()
 
 		apply_filters(filters, prev_frame, work, prev_ts, w, h);
 
-		log(LL_DEBUG_VERBOSE, "Write frame");
+		log(id, LL_DEBUG_VERBOSE, "Write frame");
 		sp -> write_frame(sp -> arg, prev_ts, w, h, prev_frame, work);
 
 		free(prev_frame);

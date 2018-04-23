@@ -1,3 +1,4 @@
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include "config.h"
 #include <errno.h>
 #include <signal.h>
@@ -102,7 +103,7 @@ void target_extpipe::operator()()
 		s -> get_frame(E_RGB, quality, &prev_ts, &w, &h, &work, &work_len);
 
 		if (max_time > 0 && time(NULL) >= cut_ts) {
-			log(LL_DEBUG, "new file");
+			log(id, LL_DEBUG, "new file");
 
 			if (p_fd) {
 				pclose(p_fd);
@@ -142,20 +143,20 @@ void target_extpipe::operator()()
 
 				workCmd = search_replace(workCmd, "%f", name);
 
-				log(LL_DEBUG, "Will invoke %s", workCmd.c_str());
+				log(id, LL_DEBUG, "Will invoke %s", workCmd.c_str());
 			}
 
 			p_fd = exec(workCmd);
 
 			if (pre_record) {
-				log(LL_DEBUG_VERBOSE, "Write pre-recorded frames");
+				log(id, LL_DEBUG_VERBOSE, "Write pre-recorded frames");
 
 				for(frame_t pair : *pre_record) {
 					if (pair.e == E_JPEG) {
 						unsigned char *temp = NULL;
 						int dw = -1, dh = -1;
 						if (!read_JPEG_memory(work, work_len, &dw, &dh, &temp))
-							log(LL_INFO, "JPEG decode error");
+							log(id, LL_INFO, "JPEG decode error");
 						else {
 							put_frame(p_fd, temp, dw, dh);
 							free(temp);
@@ -173,7 +174,7 @@ void target_extpipe::operator()()
 			}
 		}
 
-		log(LL_DEBUG_VERBOSE, "Write frame");
+		log(id, LL_DEBUG_VERBOSE, "Write frame");
 		apply_filters(filters, prev_frame, work, prev_ts, w, h);
 
 		put_frame(p_fd, work, w, h);

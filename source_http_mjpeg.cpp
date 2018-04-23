@@ -1,4 +1,4 @@
-// (C) 2017 by folkert van heusden, released under AGPL v3.0
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include <assert.h>
 #include <string>
 #include <string.h>
@@ -15,6 +15,7 @@
 
 typedef struct
 {
+	std::string id;
 	uint8_t *data;
 	size_t len;
 	char *boundary;
@@ -45,7 +46,7 @@ static size_t write_headers(void *ptr, size_t size, size_t nmemb, void *mypt)
 		if (bs) {
 			free(pctx -> boundary);
 			pctx -> boundary = strdup(bs + 1);
-			log(LL_DEBUG, "HTTP boundary header is %s\n", pctx -> boundary);
+			log(pctx -> id, LL_DEBUG, "HTTP boundary header is %s\n", pctx -> boundary);
 		}
 	}
 
@@ -57,6 +58,7 @@ static size_t write_headers(void *ptr, size_t size, size_t nmemb, void *mypt)
 typedef struct
 {
 	std::atomic_bool *stop_flag;
+	std::string id;
 	work_header_t *headers;
 	source *s;
 	bool first;
@@ -72,12 +74,12 @@ static int xfer_callback(void *clientp, curl_off_t dltotal, curl_off_t dlnow, cu
 	work_data_t *w = (work_data_t *)clientp;
 
 	if (*w -> stop_flag) {
-		log(LL_DEBUG, "MJPEG stream aborted by stop flag");
+		log(w -> id, LL_DEBUG, "MJPEG stream aborted by stop flag");
 		return 1;
 	}
 
 	if (get_us() - w -> headers -> latest_io >= 9000000) { // *FIXME* hardcoded t/o
-		log(LL_INFO, "MJPEG camera fell asleep?");
+		log(w -> id, LL_INFO, "MJPEG camera fell asleep?");
 		return 1;
 	}
 
@@ -118,7 +120,7 @@ process:
 
 		char *cl = strstr((char *)w -> data, "Content-Length:");
 		if (!cl && w -> headers -> boundary == NULL) {
-			log(LL_INFO, "Content-Length missing in header");
+			log(w -> id, LL_INFO, "Content-Length missing in header");
 			return 0;
 		}
 
@@ -149,12 +151,12 @@ process:
 
 			if (rc) {
 				w -> first = false;
-				log(LL_INFO, "first frame received, mjpeg size: %dx%d", width, height);
+				log(w -> id, LL_INFO, "first frame received, mjpeg size: %dx%d", width, height);
 
 				w -> s -> set_size(width, height);
 			}
 			else {
-				log(LL_INFO, "JPEG decode error");
+				log(w -> id, LL_INFO, "JPEG decode error");
 			}
 		}
 
@@ -207,7 +209,7 @@ process:
 	}
 
 	if (w -> n > 16 * 1024 * 1024) { // sanity limit
-		log(LL_INFO, "frame too big");
+		log(w -> id, LL_INFO, "frame too big");
 		return 0;
 	}
 
@@ -228,13 +230,13 @@ source_http_mjpeg::~source_http_mjpeg()
 
 void source_http_mjpeg::operator()()
 {
-	log(LL_INFO, "source http mjpeg thread started");
+	log(id, LL_INFO, "source http mjpeg thread started");
 
 	set_thread_name("src_h_mjpeg");
 
 	for(;!local_stop_flag;)
 	{
-		log(LL_INFO, "(re-)connect to MJPEG source %s", url.c_str());
+		log(id, LL_INFO, "(re-)connect to MJPEG source %s", url.c_str());
 
 		CURL *ch = curl_easy_init();
 
@@ -268,7 +270,7 @@ void source_http_mjpeg::operator()()
 				error_exit(false, "curl_easy_setopt(CURLOPT_SSL_VERIFYHOST) failed: %s", error);
 		}
 
-		work_header_t wh = { NULL, 0, NULL, get_us() };
+		work_header_t wh = { id, NULL, 0, NULL, get_us() };
 		curl_easy_setopt(ch, CURLOPT_HEADERDATA, &wh);
 		curl_easy_setopt(ch, CURLOPT_HEADERFUNCTION, write_headers);
 
@@ -277,6 +279,7 @@ void source_http_mjpeg::operator()()
 		curl_easy_setopt(ch, CURLOPT_WRITEFUNCTION, write_data);
 
 		work_data_t *w = new work_data_t;
+		w -> id = id;
 		w -> stop_flag = &local_stop_flag;
 		w -> s = this;
 		w -> first = w -> header = true;
@@ -304,5 +307,5 @@ void source_http_mjpeg::operator()()
 		usleep(101000);
 	}
 
-	log(LL_INFO, "source http mjpeg thread terminating");
+	log(id, LL_INFO, "source http mjpeg thread terminating");
 }

@@ -1,3 +1,4 @@
+// (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include "cairo.h"
 #include "log.h"
 #include "resize_cairo.h"
