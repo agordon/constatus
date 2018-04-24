@@ -18,6 +18,7 @@ cleaner::cleaner(db *const dbi, const int check_interval, const int purge_interv
 
 cleaner::~cleaner()
 {
+	delete dbi;
 }
 
 void cleaner::start()
