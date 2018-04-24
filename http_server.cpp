@@ -50,7 +50,7 @@ typedef struct {
 	instance_t *views;
 } http_thread_t;
 
-void send_mjpeg_stream(int cfd, source *s, double fps, int quality, bool get, int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h, instance_t *const i)
+void send_mjpeg_stream(int cfd, source *s, double fps, int quality, bool get, int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h, configuration_t *const cfg, const bool is_view_proxy)
 {
         const char reply_headers[] =
                 "HTTP/1.0 200 OK\r\n"
@@ -125,7 +125,10 @@ void send_mjpeg_stream(int cfd, source *s, double fps, int quality, bool get, in
 		}
 		else
 		{
-			apply_filters(i, s, filters, prev_frame, work, prev, w, h);
+			source *cur_s = is_view_proxy ? ((view *)s) -> get_current_source() : s;
+			instance_t *inst = find_instance_by_interface(cfg, cur_s);
+
+			apply_filters(inst, cur_s, filters, prev_frame, work, prev, w, h);
 
 			char *data_out = NULL;
 			size_t data_out_len = 0;
@@ -185,7 +188,7 @@ void send_mjpeg_stream(int cfd, source *s, double fps, int quality, bool get, in
 	free(prev_frame);
 }
 
-void send_mpng_stream(int cfd, source *s, double fps, bool get, const int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h, instance_t *const inst)
+void send_mpng_stream(int cfd, source *s, double fps, bool get, const int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h, configuration_t *const cfg, const bool is_view_proxy)
 {
         const char reply_headers[] =
                 "HTTP/1.0 200 ok\r\n"
@@ -225,7 +228,10 @@ void send_mpng_stream(int cfd, source *s, double fps, bool get, const int time_l
 		size_t work_len = 0;
 		s -> get_frame(E_RGB, -1, &prev, &w, &h, &work, &work_len);
 
-		apply_filters(inst, s, filters, prev_frame, work, prev, w, h);
+		source *cur_s = is_view_proxy ? ((view *)s) -> get_current_source() : s;
+		instance_t *inst = find_instance_by_interface(cfg, cur_s);
+
+		apply_filters(inst, cur_s, filters, prev_frame, work, prev, w, h);
 
 		data_out = NULL;
 		data_out_len = 0;
@@ -296,7 +302,7 @@ void send_mpng_stream(int cfd, source *s, double fps, bool get, const int time_l
 	free(prev_frame);
 }
 
-void send_png_frame(int cfd, source *s, bool get, const std::vector<filter *> *const filters, resize *const r, const int resize_w, const int resize_h, instance_t *const inst)
+void send_png_frame(int cfd, source *s, bool get, const std::vector<filter *> *const filters, resize *const r, const int resize_w, const int resize_h, configuration_t *const cfg, const bool is_view_proxy)
 {
         const char reply_headers[] =
                 "HTTP/1.0 200 ok\r\n"
@@ -334,7 +340,10 @@ void send_png_frame(int cfd, source *s, bool get, const std::vector<filter *> *c
 	if (!fh)
 		error_exit(true, "open_memstream() failed");
 
-	apply_filters(inst, s, filters, NULL, work, prev_ts, w, h);
+	source *cur_s = is_view_proxy ? ((view *)s) -> get_current_source() : s;
+	instance_t *inst = find_instance_by_interface(cfg, cur_s);
+
+	apply_filters(inst, cur_s, filters, NULL, work, prev_ts, w, h);
 
 	if (resize_h != -1 || resize_w != -1) {
 		int target_w = resize_w != -1 ? resize_w : w;
@@ -361,7 +370,7 @@ void send_png_frame(int cfd, source *s, bool get, const std::vector<filter *> *c
 	free(data_out);
 }
 
-void send_jpg_frame(int cfd, source *s, bool get, int quality, const std::vector<filter *> *const filters, resize *const r, const int resize_w, const int resize_h, instance_t *const inst)
+void send_jpg_frame(int cfd, source *s, bool get, int quality, const std::vector<filter *> *const filters, resize *const r, const int resize_w, const int resize_h, configuration_t *const cfg, const bool is_view_proxy)
 {
         const char reply_headers[] =
                 "HTTP/1.0 200 ok\r\n"
@@ -404,7 +413,10 @@ void send_jpg_frame(int cfd, source *s, bool get, int quality, const std::vector
 	if (filters -> empty() && !sc)
 		fwrite(work, work_len, 1, fh);
 	else {
-		apply_filters(inst, s, filters, NULL, work, prev_ts, w, h);
+		source *cur_s = is_view_proxy ? ((view *)s) -> get_current_source() : s;
+		instance_t *inst = find_instance_by_interface(cfg, cur_s);
+
+		apply_filters(inst, cur_s, filters, NULL, work, prev_ts, w, h);
 
 		if (resize_h != -1 || resize_w != -1) {
 			int target_w = resize_w != -1 ? resize_w : w;
@@ -1117,6 +1129,9 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	if (s)
 		s -> register_user();
 
+	auto vp_it = pars.find("view-proxy"); // interface
+	const bool is_view_proxy = vp_it != pars.end();
+
 	// iup = instance url parameter
 	const std::string iup = inst ? myformat("?inst=%s", url_escape(inst -> name).c_str()) : "";
 
@@ -1126,13 +1141,13 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	const std::string page_header = myformat(html_header.c_str(), inst ? inst -> name.c_str() : "(everything)");
 
 	if ((path == NULL || strcmp(path, "stream.mjpeg") == 0 || motion_compatible) && s)
-		send_mjpeg_stream(cfd, s, fps, quality, get, time_limit, filters, global_stopflag, r, resize_w, resize_h, inst);
+		send_mjpeg_stream(cfd, s, fps, quality, get, time_limit, filters, global_stopflag, r, resize_w, resize_h, cfg, is_view_proxy);
 	else if (strcmp(path, "stream.mpng") == 0 && s)
-		send_mpng_stream(cfd, s, fps, get, time_limit, filters, global_stopflag, r, resize_w, resize_h, inst);
+		send_mpng_stream(cfd, s, fps, get, time_limit, filters, global_stopflag, r, resize_w, resize_h, cfg, is_view_proxy);
 	else if (strcmp(path, "image.png") == 0 && s)
-		send_png_frame(cfd, s, get, filters, r, resize_w, resize_h, inst);
+		send_png_frame(cfd, s, get, filters, r, resize_w, resize_h, cfg, is_view_proxy);
 	else if (strcmp(path, "image.jpg") == 0 && s)
-		send_jpg_frame(cfd, s, get, quality, filters, r, resize_w, resize_h, inst);
+		send_jpg_frame(cfd, s, get, quality, filters, r, resize_w, resize_h, cfg, is_view_proxy);
 	else if (strcmp(path, "stylesheet.css") == 0) {
 		struct stat st;
 		if (stat("stylesheet.css", &st) == 0)

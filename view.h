@@ -22,6 +22,8 @@ public:
 
 	virtual bool get_frame(const encoding_t pe, const int jpeg_quality, uint64_t *ts, int *width, int *height, uint8_t **frame, size_t *frame_len) = 0;
 
+	virtual source *get_current_source();
+
 	void operator()();
 };
 

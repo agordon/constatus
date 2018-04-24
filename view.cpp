@@ -28,3 +28,8 @@ view::~view()
 void view::operator()()
 {
 }
+
+source *view::get_current_source()
+{
+	return this;
+}

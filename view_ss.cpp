@@ -7,6 +7,7 @@ view_ss::view_ss(configuration_t *const cfg, const std::string & id, const std::
 {
 	cur_source_index = 0;
         latest_switch = get_us();
+	cur_source = this;
 }
 
 view_ss::~view_ss()
@@ -26,14 +27,18 @@ std::string view_ss::get_html() const
 		dim_img += myformat(" height=%d", height);
 
 	// FIXME url-escape
-	return myformat("<html><head><style></style></head><body><img src=\"stream.mjpeg?int=%s\"%s></body></html>", id.c_str(), dim_img.c_str());
+	return myformat("<html><head><style></style></head><body><img src=\"stream.mjpeg?int=%s&view-proxy\"%s></body></html>", id.c_str(), dim_img.c_str());
+}
+
+source *view_ss::get_current_source()
+{
+	return cur_source;
 }
 
 bool view_ss::get_frame(const encoding_t pe, const int jpeg_quality, uint64_t *ts, int *width, int *height, uint8_t **frame, size_t *frame_len)
 {
 	instance_t *inst = NULL;
-	interface *i = NULL;
-	find_by_id(cfg, sources.at(cur_source_index), &inst, &i);
+	find_by_id(cfg, sources.at(cur_source_index), &inst, (interface **)&cur_source);
 
 	uint64_t si = switch_interval * 1000000.0;
 	if (switch_interval < 1.0)
@@ -48,11 +53,9 @@ bool view_ss::get_frame(const encoding_t pe, const int jpeg_quality, uint64_t *t
 		latest_switch = now;
 	}
 
-	source *s = (source *)i;
-
-	s -> register_user();
-	bool rc = s -> get_frame(pe, jpeg_quality, ts, width, height, frame, frame_len);
-	s -> unregister_user();
+	cur_source -> register_user();
+	bool rc = cur_source -> get_frame(pe, jpeg_quality, ts, width, height, frame, frame_len);
+	cur_source -> unregister_user();
 
 	return rc;
 }
