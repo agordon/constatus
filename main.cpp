@@ -1034,6 +1034,9 @@ int main(int argc, char *argv[])
 			t -> stop();
 	}
 
+	for(view *v : views)
+		v -> stop();
+
 	if (clnr)
 		clnr -> stop();
 
@@ -1045,6 +1048,9 @@ int main(int argc, char *argv[])
 
 		delete i;
 	}
+
+	for(view *v : views)
+		delete v;
 
 	delete r;
 
