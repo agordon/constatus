@@ -23,6 +23,9 @@ std::string view_all::get_html() const
 	for(instance_t * inst : cfg -> instances) {
 		source *const s = find_source(inst);
 
+		if (!s || s -> get_class_type() == CT_VIEW)
+			continue;
+
 		int w = s -> get_width();
 		int use_h = s -> get_height() * (320.0 / w);
 
