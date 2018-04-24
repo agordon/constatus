@@ -1486,7 +1486,7 @@ std::string unescape(const std::string & in, const uint64_t ts, instance_t *cons
 		work = search_replace(work, "$id$", s -> get_id());
 	}
 	std::string motion_string;
-	if (check_for_motion(i))
+	if (i && check_for_motion(i))
 		motion_string = "MOTION DETECTED";
 	work = search_replace(work, "$motion$", motion_string);
 	work = search_replace(work, "$prog-name$", NAME);
