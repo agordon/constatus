@@ -24,6 +24,7 @@ class target : public interface
 {
 protected:
 	source *s;
+	instance_t *inst;
 	const std::string store_path, prefix;
 	const int max_time;
 	const double interval;
@@ -38,7 +39,7 @@ protected:
 	void register_file(const std::string & filename);
 
 public:
-	target(const std::string & id, const std::string & descr, source *const s, const std::string & store_path, const std::string & prefix, const int max_time, const double interval, const std::vector<filter *> *const filters, const std::string & exec_start, const std::string & exec_cycle, const std::string & exec_end, const int override_fps);
+	target(const std::string & id, const std::string & descr, source *const s, const std::string & store_path, const std::string & prefix, const int max_time, const double interval, const std::vector<filter *> *const filters, const std::string & exec_start, const std::string & exec_cycle, const std::string & exec_end, const int override_fps, instance_t *const inst);
 	virtual ~target();
 
 	void start(std::vector<frame_t> *const pre_record, const unsigned long event_nr);

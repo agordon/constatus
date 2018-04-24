@@ -84,7 +84,7 @@ interface *find_by_id(configuration_t *const cfg, const std::string & id)
 bool check_for_motion(instance_t *const inst)
 {
 	for(interface *i : inst -> interfaces) {
-		if (((motion_trigger *)i) -> check_motion())
+		if (i -> get_class_type() == CT_MOTIONTRIGGER && ((motion_trigger *)i) -> check_motion())
 			return true;
 	}
 

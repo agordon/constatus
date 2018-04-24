@@ -27,12 +27,11 @@ class filter_add_text : public filter
 private:
 	std::string what;
 	text_pos_t tp;
-	instance_t *const i;
 
 public:
-	filter_add_text(const std::string & what, const text_pos_t tp, instance_t *const i);
+	filter_add_text(const std::string & what, const text_pos_t tp);
 	~filter_add_text();
 
 	bool uses_in_out() const { return false; }
-	void apply(const uint64_t ts, const int w, const int h, const uint8_t *const prev, uint8_t *const in_out);
+	void apply(instance_t *const i, const uint64_t ts, const int w, const int h, const uint8_t *const prev, uint8_t *const in_out);
 };

@@ -21,7 +21,7 @@
 #include "log.h"
 #include "v4l2_loopback.h"
 
-v4l2_loopback::v4l2_loopback(const std::string & id, const std::string & descr, source *const s, const double fps, const std::string & dev, const std::vector<filter *> *const filters) : interface(id, descr), s(s), fps(fps), dev(dev), filters(filters)
+v4l2_loopback::v4l2_loopback(const std::string & id, const std::string & descr, source *const s, const double fps, const std::string & dev, const std::vector<filter *> *const filters, instance_t *const inst) : interface(id, descr), s(s), fps(fps), dev(dev), filters(filters), inst(inst)
 {
 	th = NULL;
 	local_stop_flag = false;
@@ -78,7 +78,7 @@ void v4l2_loopback::operator()()
 				error_exit(true, "VIDIOC_S_FMT failed");
 		}
 
-		apply_filters(filters, prev_frame, work, prev_ts, w, h);
+		apply_filters(inst, filters, prev_frame, work, prev_ts, w, h);
 
 		if (write(v4l2sink, work, work_len) == -1)
 			error_exit(true, "write to video loopback failed");

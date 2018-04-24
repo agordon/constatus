@@ -23,7 +23,7 @@ std::string gen_filename(const std::string & store_path, const std::string & pre
 			f_nr, use_ext.c_str());
 }
 
-target::target(const std::string & id, const std::string & descr, source *const s, const std::string & store_path, const std::string & prefix, const int max_time, const double interval, const std::vector<filter *> *const filters, const std::string & exec_start, const std::string & exec_cycle, const std::string & exec_end, const int override_fps) : interface(id, descr), s(s), store_path(store_path), prefix(prefix), max_time(max_time), interval(interval), filters(filters), exec_start(exec_start), exec_cycle(exec_cycle), exec_end(exec_end), override_fps(override_fps)
+target::target(const std::string & id, const std::string & descr, source *const s, const std::string & store_path, const std::string & prefix, const int max_time, const double interval, const std::vector<filter *> *const filters, const std::string & exec_start, const std::string & exec_cycle, const std::string & exec_end, const int override_fps, instance_t *const inst) : interface(id, descr), s(s), inst(inst), store_path(store_path), prefix(prefix), max_time(max_time), interval(interval), filters(filters), exec_start(exec_start), exec_cycle(exec_cycle), exec_end(exec_end), override_fps(override_fps) 
 {
 	th = NULL;
 	local_stop_flag = false;

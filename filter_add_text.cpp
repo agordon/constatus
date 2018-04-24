@@ -1527,7 +1527,7 @@ std::string unescape(const std::string & in, const uint64_t ts, instance_t *cons
 	return work;
 }
 
-filter_add_text::filter_add_text(const std::string & whatIn, const text_pos_t tpIn, instance_t *const i) : what(whatIn), tp(tpIn), i(i)
+filter_add_text::filter_add_text(const std::string & whatIn, const text_pos_t tpIn) : what(whatIn), tp(tpIn)
 {
 }
 
@@ -1607,7 +1607,7 @@ void print_timestamp(unsigned char *const img, const int width, const int height
 	add_text(img, width, height, text_out.c_str(), x, y);
 }
 
-void filter_add_text::apply(const uint64_t ts, const int w, const int h, const uint8_t *const prev, uint8_t *const in_out)
+void filter_add_text::apply(instance_t *const i, const uint64_t ts, const int w, const int h, const uint8_t *const prev, uint8_t *const in_out)
 {
 	print_timestamp(in_out, w, h, what, tp, ts, i);
 }

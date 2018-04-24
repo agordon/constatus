@@ -103,7 +103,7 @@ void log(const std::string & id, const int ll, const char *const what, ...)
 	va_list ap;
 	va_start(ap, what);
 
-	_log(id, ll, what, ap);
+	_log(myformat("[%s]", id.c_str()), ll, what, ap);
 
 	va_end(ap);
 }

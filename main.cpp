@@ -196,11 +196,9 @@ bool find_interval_or_fps(const Setting & cfg, double *const interval, const std
 	return true;
 }
 
-std::vector<filter *> *load_filters(const Setting & in, instance_t *const inst, resize *const r)
+std::vector<filter *> *load_filters(const Setting & in, resize *const r, meta *const m)
 {
 	std::vector<filter *> *const filters = new std::vector<filter *>();
-
-	source *s = find_source(inst);
 
 	size_t n_f = in.getLength();
 	log(LL_DEBUG, " %zu filters", n_f);
@@ -242,7 +240,7 @@ std::vector<filter *> *load_filters(const Setting & in, instance_t *const inst, 
 			int noise_level = cfg_int(ae, "noise-factor", "at what difference levell is the pixel considered to be changed", true, 32);
 			double pixels_changed_perctange = cfg_float(ae, "pixels-changed-percentage", "what %% of pixels need to be changed before the marker is drawn", false, 1.0);
 
-			filters -> push_back(new filter_marker_simple(sm, psm, s -> get_meta(), noise_level, pixels_changed_perctange));
+			filters -> push_back(new filter_marker_simple(sm, psm, m, noise_level, pixels_changed_perctange));
 		}
 		else if (s_type == "apply-mask") {
 			std::string selection_bitmap = cfg_str(ae, "selection-bitmap", "bitmaps indicating which pixels to look at. must be same size as webcam image and must be a .pbm-file. leave empty to disable.", false, "");
@@ -293,7 +291,7 @@ std::vector<filter *> *load_filters(const Setting & in, instance_t *const inst, 
 			else
 				error_exit(false, "(text-)position %s is not understood", s_position.c_str());
 
-			filters -> push_back(new filter_add_text(s_text, tp, inst));
+			filters -> push_back(new filter_add_text(s_text, tp));
 		}
 		else if (s_type == "scaled-text") {
 			std::string s_text = cfg_str(ae, "text", "what text to show", false, "");
@@ -305,7 +303,7 @@ std::vector<filter *> *load_filters(const Setting & in, instance_t *const inst, 
 			int g = cfg_int(ae, "g", "green component of text color", true, 0);
 			int b = cfg_int(ae, "b", "blue component of text color", true, 0);
 
-			filters -> push_back(new filter_add_scaled_text(s_text, font, x, y, fs, r, g, b, inst));
+			filters -> push_back(new filter_add_scaled_text(s_text, font, x, y, fs, r, g, b));
 		}
 		else {
 			error_exit(false, "Filter %s is not known", s_type.c_str());
@@ -343,7 +341,7 @@ void interval_fps_error(const char *const name, const char *what, const char *id
 	error_exit(false, "Interval/%s %s not set or invalid (e.g. 0) for target (%s). Make sure that you use a float-value for the fps/interval, e.g. 13.0 instead of 13", name, what, id);
 }
 
-target * load_target(const Setting & in, instance_t *const i, resize *const r)
+target * load_target(const Setting & in, instance_t *const inst, resize *const r, meta *const m)
 {
 	target *t = NULL;
 
@@ -375,43 +373,43 @@ target * load_target(const Setting & in, instance_t *const i, resize *const r)
 	std::vector<filter *> *filters = NULL;
 	try {
 		const Setting & f = in.lookup("filters");
-		filters = load_filters(f, i, r);
+		filters = load_filters(f, r, m);
 	}
 	catch(SettingNotFoundException & snfe) {
 	}
 
-	source *s = find_source(i);
+	source *s = find_source(inst);
 
 	if (format == "avi")
 #ifdef WITH_GWAVI
-		t = new target_avi(id, descr, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, override_fps);
+		t = new target_avi(id, descr, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, override_fps, inst);
 #else
 		error_exit(false, "libgwavi not compiled in");
 #endif
 	else if (format == "extpipe") {
 		std::string cmd = cfg_str(in, "cmd", "Command to send the frames to", false, "");
 
-		t = new target_extpipe(id, descr, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, cmd);
+		t = new target_extpipe(id, descr, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, cmd, inst);
 	}
 	else if (format == "ffmpeg") {
 		int bitrate = cfg_int(in, "bitrate", "How many bits per second to emit. For 352x288 200000 is a sane value. This value affects the quality.", true, 200000);
 		std::string type = cfg_str(in, "ffmpeg-type", "E.g. flv, mp4", true, "mp4");
 		std::string const parameters = cfg_str(in, "ffmpeg-parameters", "Parameters specific for ffmpeg.", true, "");
 
-		t = new target_ffmpeg(id, descr, parameters, s, path, prefix, restart_interval, interval, type, bitrate, filters, exec_start, exec_cycle, exec_end, override_fps);
+		t = new target_ffmpeg(id, descr, parameters, s, path, prefix, restart_interval, interval, type, bitrate, filters, exec_start, exec_cycle, exec_end, override_fps, inst);
 	}
 	else if (format == "jpeg")
-		t = new target_jpeg(id, descr, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end);
+		t = new target_jpeg(id, descr, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, inst);
 	else if (format == "plugin") {
 		stream_plugin_t *sp = load_stream_plugin(in);
 
-		t = new target_plugin(id, descr, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, sp, override_fps);
+		t = new target_plugin(id, descr, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, sp, override_fps, inst);
 	}
 	else if (format == "vnc") {
 		std::string listen_adapter = cfg_str(in, "listen-adapter", "network interface to listen on or 0.0.0.0 for all", false, "");
 		int listen_port = cfg_int(in, "listen-port", "port to listen on", false, 5901);
 
-		t = new target_vnc(id, descr, s, listen_adapter, listen_port, restart_interval, interval, filters, exec_start, exec_end);
+		t = new target_vnc(id, descr, s, listen_adapter, listen_port, restart_interval, interval, filters, exec_start, exec_end, inst);
 	}
 	else {
 		error_exit(false, "Format %s is unknown (stream to disk backends)", format.c_str());
@@ -463,7 +461,7 @@ view * load_view(configuration_t *const cfg, const Setting & in)
 	return v;
 }
 
-void load_http_servers(configuration_t *const cfg, instance_t *const ci, const Setting & hs, const bool local_instance, source *const s, resize *const r, std::vector<view *> *const views)
+void load_http_servers(configuration_t *const cfg, instance_t *const ci, const Setting & hs, const bool local_instance, source *const s, resize *const r, std::vector<view *> *const views, meta *const m)
 {
 	size_t n_hl = hs.getLength();
 
@@ -498,7 +496,7 @@ void load_http_servers(configuration_t *const cfg, instance_t *const ci, const S
 		std::vector<filter *> *http_filters = NULL;
 		try {
 			const Setting & f = server.lookup("filters");
-			http_filters = load_filters(f, ci, r);
+			http_filters = load_filters(f, r, m);
 		}
 		catch(SettingNotFoundException & snfe) {
 		}
@@ -507,9 +505,7 @@ void load_http_servers(configuration_t *const cfg, instance_t *const ci, const S
 		if (!find_interval_or_fps(server, &interval, "fps", &fps) && is_rest == false)
 			interval_fps_error("fps", "for showing video frames", id.c_str());
 
-		instance_t *look_at = local_instance ? ci : NULL;
-
-		interface *h = new http_server(cfg, id, descr, look_at, listen_adapter, listen_port, fps, jpeg_quality, time_limit, http_filters, r, resize_w, resize_h, motion_compatible, allow_admin, archive_access, snapshot_dir, is_rest, views);
+		interface *h = new http_server(cfg, id, descr, listen_adapter, listen_port, fps, jpeg_quality, time_limit, http_filters, r, resize_w, resize_h, motion_compatible, allow_admin, archive_access, snapshot_dir, is_rest, views);
 		ci -> interfaces.push_back(h);
 	}
 }
@@ -517,7 +513,7 @@ void load_http_servers(configuration_t *const cfg, instance_t *const ci, const S
 void version()
 {
 	printf(NAME " " VERSION "\n");
-	printf("(C) 2017-2018-2018 by Folkert van Heusden\n\n");
+	printf("(C) 2017-2018 by Folkert van Heusden\n\n");
 }
 
 void help()
@@ -762,7 +758,7 @@ int main(int argc, char *argv[])
 		log(LL_INFO, "Configuring the HTTP server(s)...");
 
 		try {
-			load_http_servers(&cfg, ci, instance_root["http-server"], true, s, r, NULL);
+			load_http_servers(&cfg, ci, instance_root["http-server"], true, s, r, NULL, s -> get_meta());
 		}
 		catch(const SettingNotFoundException &nfex) {
 			log(LL_INFO, " no HTTP server");
@@ -790,12 +786,12 @@ int main(int argc, char *argv[])
 			std::vector<filter *> *filters = NULL;
 			try {
 				const Setting & f = o_vlb.lookup("filters");
-				filters = load_filters(f, ci, r);
+				filters = load_filters(f, r, s -> get_meta());
 			}
 			catch(SettingNotFoundException & snfe) {
 			}
 
-			interface *f = new v4l2_loopback(id, descr, s, fps, dev, filters);
+			interface *f = new v4l2_loopback(id, descr, s, fps, dev, filters, ci);
 			ci -> interfaces.push_back(f);
 		}
 		catch(const SettingNotFoundException &nfex) {
@@ -839,7 +835,7 @@ int main(int argc, char *argv[])
 				std::vector<filter *> *filters_detection = NULL;
 				try {
 					const Setting & f = trigger.lookup("filters-detection");
-					filters_detection = load_filters(f, ci, r);
+					filters_detection = load_filters(f, r, s -> get_meta());
 				}
 				catch(SettingNotFoundException & snfe) {
 				}
@@ -859,7 +855,7 @@ int main(int argc, char *argv[])
 					for(size_t i=0; i<n_t; i++) {
 						const Setting & ct = t[i];
 
-						motion_targets -> push_back(load_target(ct, ci, r));
+						motion_targets -> push_back(load_target(ct, ci, r, s -> get_meta()));
 					}
 				}
 				catch(SettingNotFoundException & snfe) {
@@ -882,7 +878,7 @@ int main(int argc, char *argv[])
 				std::string exec_start = cfg_str(trigger, "exec-start", "script to start when recording starts", true, "");
 				std::string exec_end = cfg_str(trigger, "exec-end", "script to start when the recording stops", true, "");
 
-				interface *m = new motion_trigger(id, descr, s, noise_level, pixels_changed_perctange, min_duration, mute_duration, warmup_duration, pre_motion_record_duration, filters_detection, motion_targets, sm, et, max_fps, exec_start, exec_end);
+				interface *m = new motion_trigger(id, descr, s, noise_level, pixels_changed_perctange, min_duration, mute_duration, warmup_duration, pre_motion_record_duration, filters_detection, motion_targets, sm, et, max_fps, exec_start, exec_end, ci);
 				ci -> interfaces.push_back(m);
 			}
 		}
@@ -904,7 +900,7 @@ int main(int argc, char *argv[])
 			for(size_t i=0; i<n_t; i++) {
 				const Setting & ct = t[i];
 
-				interface *target = load_target(ct, ci, r);
+				interface *target = load_target(ct, ci, r, s -> get_meta());
 				ci -> interfaces.push_back(target);
 			}
 		}
@@ -943,7 +939,7 @@ int main(int argc, char *argv[])
 
 	try {
 		log(LL_INFO, "Loading global HTTP(/REST) server(s)");
-		load_http_servers(&cfg, main_instance, root["global-http-server"], false, NULL, NULL, &views);
+		load_http_servers(&cfg, main_instance, root["global-http-server"], false, NULL, NULL, &views, NULL);
 	}
 	catch(const SettingNotFoundException &nfex) {
 		log(LL_INFO, " no global HTTP(/REST) server(s)");

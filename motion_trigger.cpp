@@ -21,7 +21,7 @@
 #include "exec.h"
 #include "motion_trigger.h"
 
-motion_trigger::motion_trigger(const std::string & id, const std::string & descr, source *const s, const int noise_level, const double percentage_pixels_changed, const int keep_recording_n_frames, const int ignore_n_frames_after_recording, const int camera_warm_up, const int pre_record_count, const std::vector<filter *> *const filters, std::vector<target *> *const targets, selection_mask *const pixel_select_bitmap, ext_trigger_t *const et, const double max_fps, const std::string & e_start, const std::string & e_end) : interface(id, descr), s(s), noise_level(noise_level), percentage_pixels_changed(percentage_pixels_changed), keep_recording_n_frames(keep_recording_n_frames), ignore_n_frames_after_recording(ignore_n_frames_after_recording), camera_warm_up(camera_warm_up), pre_record_count(pre_record_count), filters(filters), targets(targets), pixel_select_bitmap(pixel_select_bitmap), et(et), max_fps(max_fps), exec_start(e_start), exec_end(e_end)
+motion_trigger::motion_trigger(const std::string & id, const std::string & descr, source *const s, const int noise_level, const double percentage_pixels_changed, const int keep_recording_n_frames, const int ignore_n_frames_after_recording, const int camera_warm_up, const int pre_record_count, const std::vector<filter *> *const filters, std::vector<target *> *const targets, selection_mask *const pixel_select_bitmap, ext_trigger_t *const et, const double max_fps, const std::string & e_start, const std::string & e_end, instance_t *const inst) : interface(id, descr), s(s), noise_level(noise_level), percentage_pixels_changed(percentage_pixels_changed), keep_recording_n_frames(keep_recording_n_frames), ignore_n_frames_after_recording(ignore_n_frames_after_recording), camera_warm_up(camera_warm_up), pre_record_count(pre_record_count), filters(filters), targets(targets), pixel_select_bitmap(pixel_select_bitmap), et(et), max_fps(max_fps), exec_start(e_start), exec_end(e_end), inst(inst)
 {
 	if (et)
 		et -> arg = et -> init_motion_trigger(et -> par.c_str());
@@ -122,7 +122,7 @@ void motion_trigger::operator()()
 		const int nl3 = noise_level * 3;
 		pthread_rwlock_unlock(&noise_level_lock);
 
-		apply_filters(filters, prev_frame, work, prev_ts, w, h);
+		apply_filters(inst, filters, prev_frame, work, prev_ts, w, h);
 
 		if (prev_frame) {
 			int cnt = 0;
@@ -187,9 +187,9 @@ void motion_trigger::operator()()
 
 					struct timeval ets;
 					gettimeofday(&ets, NULL);
-					event_nr = get_db() -> register_event(id, EVT_MOTION, "FIXME", &ets);
-
 					motion_triggered = true;
+
+					event_nr = get_db() -> register_event(id, EVT_MOTION, "FIXME", &ets);
 
 					std::vector<frame_t> *pr = new std::vector<frame_t>(prerecord);
 					prerecord.clear();

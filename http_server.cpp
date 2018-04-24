@@ -36,7 +36,6 @@
 #include "target_ffmpeg.h"
 
 typedef struct {
-	instance_t *inst;
 	int fd;
 	double fps;
 	int quality;
@@ -129,7 +128,7 @@ void send_mjpeg_view_stream(const int cfd, view *v, const double fps, const int 
 	}
 }
 
-void send_mjpeg_stream(int cfd, source *s, double fps, int quality, bool get, int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h)
+void send_mjpeg_stream(int cfd, source *s, double fps, int quality, bool get, int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h, instance_t *const i)
 {
         const char reply_headers[] =
                 "HTTP/1.0 200 OK\r\n"
@@ -204,7 +203,7 @@ void send_mjpeg_stream(int cfd, source *s, double fps, int quality, bool get, in
 		}
 		else
 		{
-			apply_filters(filters, prev_frame, work, prev, w, h);
+			apply_filters(i, filters, prev_frame, work, prev, w, h);
 
 			char *data_out = NULL;
 			size_t data_out_len = 0;
@@ -264,7 +263,7 @@ void send_mjpeg_stream(int cfd, source *s, double fps, int quality, bool get, in
 	free(prev_frame);
 }
 
-void send_mpng_stream(int cfd, source *s, double fps, bool get, const int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h)
+void send_mpng_stream(int cfd, source *s, double fps, bool get, const int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h, instance_t *const inst)
 {
         const char reply_headers[] =
                 "HTTP/1.0 200 ok\r\n"
@@ -304,7 +303,7 @@ void send_mpng_stream(int cfd, source *s, double fps, bool get, const int time_l
 		size_t work_len = 0;
 		s -> get_frame(E_RGB, -1, &prev, &w, &h, &work, &work_len);
 
-		apply_filters(filters, prev_frame, work, prev, w, h);
+		apply_filters(inst, filters, prev_frame, work, prev, w, h);
 
 		data_out = NULL;
 		data_out_len = 0;
@@ -375,7 +374,7 @@ void send_mpng_stream(int cfd, source *s, double fps, bool get, const int time_l
 	free(prev_frame);
 }
 
-void send_png_frame(int cfd, source *s, bool get, const std::vector<filter *> *const filters, resize *const r, const int resize_w, const int resize_h)
+void send_png_frame(int cfd, source *s, bool get, const std::vector<filter *> *const filters, resize *const r, const int resize_w, const int resize_h, instance_t *const inst)
 {
         const char reply_headers[] =
                 "HTTP/1.0 200 ok\r\n"
@@ -413,7 +412,7 @@ void send_png_frame(int cfd, source *s, bool get, const std::vector<filter *> *c
 	if (!fh)
 		error_exit(true, "open_memstream() failed");
 
-	apply_filters(filters, NULL, work, prev_ts, w, h);
+	apply_filters(inst, filters, NULL, work, prev_ts, w, h);
 
 	if (resize_h != -1 || resize_w != -1) {
 		int target_w = resize_w != -1 ? resize_w : w;
@@ -440,7 +439,7 @@ void send_png_frame(int cfd, source *s, bool get, const std::vector<filter *> *c
 	free(data_out);
 }
 
-void send_jpg_frame(int cfd, source *s, bool get, int quality, const std::vector<filter *> *const filters, resize *const r, const int resize_w, const int resize_h)
+void send_jpg_frame(int cfd, source *s, bool get, int quality, const std::vector<filter *> *const filters, resize *const r, const int resize_w, const int resize_h, instance_t *const inst)
 {
         const char reply_headers[] =
                 "HTTP/1.0 200 ok\r\n"
@@ -483,7 +482,7 @@ void send_jpg_frame(int cfd, source *s, bool get, int quality, const std::vector
 	if (filters -> empty() && !sc)
 		fwrite(work, work_len, 1, fh);
 	else {
-		apply_filters(filters, NULL, work, prev_ts, w, h);
+		apply_filters(inst, filters, NULL, work, prev_ts, w, h);
 
 		if (resize_h != -1 || resize_w != -1) {
 			int target_w = resize_w != -1 ? resize_w : w;
@@ -625,7 +624,7 @@ bool take_a_picture(source *const s, const std::string & snapshot_dir, const int
 	return rc;
 }
 
-interface * start_a_video(source *const s, const std::string & snapshot_dir, const int quality)
+interface * start_a_video(source *const s, const std::string & snapshot_dir, const int quality, instance_t *const inst)
 {
 	const std::string id = myformat("%ld", rand()); // FIXME better rand
 	const std::string descr = "snapshot started by HTTP server";
@@ -633,9 +632,9 @@ interface * start_a_video(source *const s, const std::string & snapshot_dir, con
 	std::vector<filter *> *const filters = new std::vector<filter *>();
 
 #ifdef WITH_GWAVI
-	interface *i = new target_avi(id, descr, s, snapshot_dir, "snapshot-", quality, -1, -1, filters, "", "", "", -1);
+	interface *i = new target_avi(id, descr, s, snapshot_dir, "snapshot-", quality, -1, -1, filters, "", "", "", -1, inst);
 #else
-	interface *i = new target_ffmpeg(id, descr, "", s, snapshot_dir, "snapshot-", -1, -1, "mp4", 201000, filters, "", "", "", -1);
+	interface *i = new target_ffmpeg(id, descr, "", s, snapshot_dir, "snapshot-", -1, -1, "mp4", 201000, filters, "", "", "", -1, inst);
 #endif
 	i -> start();
 
@@ -671,6 +670,7 @@ std::string run_rest(configuration_t *const cfg, const std::string & path, const
 
 	cfg -> lock.lock();
 	interface *i = (parts -> size() >= 1 && !cmd) ? find_by_id(cfg, parts -> at(0)) : NULL;
+	instance_t *inst = find_instance_by_interface(cfg, i);
 
 	if (parts -> size() < 2) {
 		code = 500;
@@ -759,7 +759,7 @@ std::string run_rest(configuration_t *const cfg, const std::string & path, const
 		}
 	}
 	else if (cmd && parts -> at(1) == "start-a-recording" && i -> get_class_type() == CT_SOURCE) {
-		interface *str = start_a_video((source *)i, snapshot_dir, quality);
+		interface *str = start_a_video((source *)i, snapshot_dir, quality, inst);
 
 		if (str) {
 			json_object_set_new(json, "msg", json_string("OK"));
@@ -1059,7 +1059,7 @@ view *find_view(std::vector<view *> *const views, const std::string & id)
 	return NULL;
 }
 
-void handle_http_client(int cfd, double fps, int quality, int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, instance_t *inst, const std::string & snapshot_dir, const bool allow_admin, const bool archive_acces, configuration_t *const cfg, std::vector<view *> *const views)
+void handle_http_client(int cfd, double fps, int quality, int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, const std::string & snapshot_dir, const bool allow_admin, const bool archive_acces, configuration_t *const cfg, std::vector<view *> *const views)
 {
 	sigset_t all_sigs;
 	sigfillset(&all_sigs);
@@ -1128,6 +1128,8 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 
 	std::map<std::string, std::string> pars;
 
+	instance_t *inst = NULL;
+
 	if (!motion_compatible) {
 		char *dummy = strchr(path, '\r');
 		if (!dummy)
@@ -1175,12 +1177,10 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 
 			free(pars_str);
 
-			if (!inst) {
-				auto inst_it = pars.find("inst");
+			auto inst_it = pars.find("inst");
 
-				if (inst_it != pars.end())
-					inst = find_instance_by_name(cfg, inst_it -> second);
-			}
+			if (inst_it != pars.end())
+				inst = find_instance_by_name(cfg, inst_it -> second);
 		}
 	}
 
@@ -1197,7 +1197,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	const std::string page_header = myformat(html_header.c_str(), inst ? inst -> name.c_str() : "(everything)");
 
 	if ((path == NULL || strcmp(path, "stream.mjpeg") == 0 || motion_compatible) && s)
-		send_mjpeg_stream(cfd, s, fps, quality, get, time_limit, filters, global_stopflag, r, resize_w, resize_h);
+		send_mjpeg_stream(cfd, s, fps, quality, get, time_limit, filters, global_stopflag, r, resize_w, resize_h, inst);
 	else if (strcmp(path, "view-proxy") == 0 && views) {
 		auto view_it = pars.find("id");
 		std::string id;
@@ -1210,11 +1210,11 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 		send_mjpeg_view_stream(cfd, v, fps, quality, get, time_limit, global_stopflag);
 	}
 	else if (strcmp(path, "stream.mpng") == 0 && s)
-		send_mpng_stream(cfd, s, fps, get, time_limit, filters, global_stopflag, r, resize_w, resize_h);
+		send_mpng_stream(cfd, s, fps, get, time_limit, filters, global_stopflag, r, resize_w, resize_h, inst);
 	else if (strcmp(path, "image.png") == 0 && s)
-		send_png_frame(cfd, s, get, filters, r, resize_w, resize_h);
+		send_png_frame(cfd, s, get, filters, r, resize_w, resize_h, inst);
 	else if (strcmp(path, "image.jpg") == 0 && s)
-		send_jpg_frame(cfd, s, get, quality, filters, r, resize_w, resize_h);
+		send_jpg_frame(cfd, s, get, quality, filters, r, resize_w, resize_h, inst);
 	else if (strcmp(path, "stylesheet.css") == 0) {
 		struct stat st;
 		if (stat("stylesheet.css", &st) == 0)
@@ -1463,7 +1463,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 			log(LL_DEBUG, "short write on response header");
 	}
 	else if (strcmp(path, "snapshot-video/") == 0) {
-		interface *i = start_a_video(s, snapshot_dir, quality);
+		interface *i = start_a_video(s, snapshot_dir, quality, inst);
 		//printf("interface %p instance %p\n", i, inst);
 
 		std::string reply = http_200_header + "???";
@@ -1507,7 +1507,7 @@ void * handle_http_client_thread(void *ct_in)
 		handle_rest(ct -> fd, ct -> cfg, ct -> global_stopflag, ct -> snapshot_dir, ct -> quality);
 	}
 	else {
-		handle_http_client(ct -> fd, ct -> fps, ct -> quality, ct -> time_limit, ct -> filters, ct -> global_stopflag, ct -> r, ct -> resize_w, ct -> resize_h, ct -> motion_compatible, ct -> inst, ct -> snapshot_dir, ct -> allow_admin, ct -> archive_acces, ct -> cfg, ct -> views);
+		handle_http_client(ct -> fd, ct -> fps, ct -> quality, ct -> time_limit, ct -> filters, ct -> global_stopflag, ct -> r, ct -> resize_w, ct -> resize_h, ct -> motion_compatible, ct -> snapshot_dir, ct -> allow_admin, ct -> archive_acces, ct -> cfg, ct -> views);
 	}
 
 	delete ct;
@@ -1515,7 +1515,7 @@ void * handle_http_client_thread(void *ct_in)
 	return NULL;
 }
 
-http_server::http_server(configuration_t *const cfg, const std::string & id, const std::string & descr, instance_t *const inst, const std::string & http_adapter, const int http_port, const double fps, const int quality, const int time_limit, const std::vector<filter *> *const f, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, const bool allow_admin, const bool archive_acces, const std::string & snapshot_dir, const bool is_rest, std::vector<view *> *const views) : cfg(cfg), interface(id, descr), inst(inst), fps(fps), quality(quality), time_limit(time_limit), f(f), r(r), resize_w(resize_w), resize_h(resize_h), motion_compatible(motion_compatible), allow_admin(allow_admin), archive_acces(archive_acces), snapshot_dir(snapshot_dir), is_rest(is_rest), views(views)
+http_server::http_server(configuration_t *const cfg, const std::string & id, const std::string & descr, const std::string & http_adapter, const int http_port, const double fps, const int quality, const int time_limit, const std::vector<filter *> *const f, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, const bool allow_admin, const bool archive_acces, const std::string & snapshot_dir, const bool is_rest, std::vector<view *> *const views) : cfg(cfg), interface(id, descr), fps(fps), quality(quality), time_limit(time_limit), f(f), r(r), resize_w(resize_w), resize_h(resize_h), motion_compatible(motion_compatible), allow_admin(allow_admin), archive_acces(archive_acces), snapshot_dir(snapshot_dir), is_rest(is_rest), views(views)
 {
 	fd = start_listen(http_adapter.c_str(), http_port, 5);
 	ct = CT_HTTPSERVER;
@@ -1561,7 +1561,6 @@ void http_server::operator()()
 
 		http_thread_t *ct = new http_thread_t;
 
-		ct -> inst = inst;
 		ct -> fd = cfd;
 		ct -> fps = fps;
 		ct -> quality = quality;

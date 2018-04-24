@@ -16,7 +16,7 @@ extern "C" {
 #include "picio.h"
 #include "utils.h"
 
-target_ffmpeg::target_ffmpeg(const std::string & id, const std::string & descr, const std::string & parameters, source *const s, const std::string & store_path, const std::string & prefix, const int max_time, const double interval, const std::string & type, const int bitrate, const std::vector<filter *> *const filters, const std::string & exec_start, const std::string & exec_cycle, const std::string & exec_end, const int override_fps) : target(id, descr, s, store_path, prefix, max_time, interval, filters, exec_start, exec_cycle, exec_end, override_fps), parameters(parameters), type(type), bitrate(bitrate)
+target_ffmpeg::target_ffmpeg(const std::string & id, const std::string & descr, const std::string & parameters, source *const s, const std::string & store_path, const std::string & prefix, const int max_time, const double interval, const std::string & type, const int bitrate, const std::vector<filter *> *const filters, const std::string & exec_start, const std::string & exec_cycle, const std::string & exec_end, const int override_fps, instance_t *const inst) : target(id, descr, s, store_path, prefix, max_time, interval, filters, exec_start, exec_cycle, exec_end, override_fps, inst), parameters(parameters), type(type), bitrate(bitrate)
 {
 	avcodec_register_all();
 
@@ -454,7 +454,7 @@ static bool open_video(AVFormatContext *oc, AVCodec *codec, OutputStream *ost, A
 	return true;
 }
 
-static AVFrame *get_video_frame(OutputStream *ost, source *const s, uint64_t *const prev_ts, const std::vector<filter *> *const filters, uint8_t **prev_frame, std::vector<frame_t> **pre_record)
+static AVFrame *get_video_frame(OutputStream *ost, source *const s, uint64_t *const prev_ts, const std::vector<filter *> *const filters, uint8_t **prev_frame, std::vector<frame_t> **pre_record, instance_t *const inst)
 {
 	AVCodecContext *c = ost->enc;
 
@@ -493,7 +493,7 @@ static AVFrame *get_video_frame(OutputStream *ost, source *const s, uint64_t *co
 		}
 	}
 
-	apply_filters(filters, *prev_frame, work, *prev_ts, w, h);
+	apply_filters(inst, filters, *prev_frame, work, *prev_ts, w, h);
 
 	/* as we only generate a YUV420P picture, we must convert it
 	 * to the codec pixel format if needed */
@@ -516,11 +516,11 @@ static AVFrame *get_video_frame(OutputStream *ost, source *const s, uint64_t *co
 	return ost->frame;
 }
 
-static bool write_video_frame(AVFormatContext *oc, OutputStream *ost, source *const s, uint64_t *const prev_ts, const std::vector<filter *> *const filters, uint8_t **prev_frame, std::vector<frame_t> **pre_record)
+static bool write_video_frame(AVFormatContext *oc, OutputStream *ost, source *const s, uint64_t *const prev_ts, const std::vector<filter *> *const filters, uint8_t **prev_frame, std::vector<frame_t> **pre_record, instance_t *const inst)
 {
 	AVCodecContext *c = ost->enc;
 
-	AVFrame *frame = get_video_frame(ost, s, prev_ts, filters, prev_frame, pre_record);
+	AVFrame *frame = get_video_frame(ost, s, prev_ts, filters, prev_frame, pre_record, inst);
 	if (!frame)
 		return false;
 
@@ -682,7 +682,7 @@ void target_ffmpeg::operator()()
 			//			(!encode_audio || av_compare_ts(video_st.next_pts, video_st.enc->time_base,
 			//							audio_st.next_pts, audio_st.enc->time_base) <= 0)) {
 			//encode_video = !write_video_frame(oc, &video_st, s, &prev_ts);
-			if (!write_video_frame(oc, &video_st, s, &prev_ts, filters, &prev_frame, &pre_record))
+			if (!write_video_frame(oc, &video_st, s, &prev_ts, filters, &prev_frame, &pre_record, inst))
 				break;
 			//	} else {
 			//		encode_audio = !write_audio_frame(oc, &audio_st);
