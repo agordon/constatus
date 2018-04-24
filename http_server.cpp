@@ -47,86 +47,8 @@ typedef struct {
 	bool motion_compatible, allow_admin, archive_acces, is_rest;
 	configuration_t *cfg;
 	std::string snapshot_dir;
-	std::vector<view *> *views;
+	instance_t *views;
 } http_thread_t;
-
-void send_mjpeg_view_stream(const int cfd, view *v, const double fps, const int quality, const bool get, const int time_limit, std::atomic_bool *const global_stopflag)
-{
-        const char reply_headers[] =
-                "HTTP/1.0 200 OK\r\n"
-                "Cache-Control: no-cache\r\n"
-                "Pragma: no-cache\r\n"
-		"Server: " NAME " " VERSION "\r\n"
-                "Expires: thu, 01 dec 1994 16:00:00 gmt\r\n"
-                "Connection: close\r\n"
-                "Content-Type: multipart/x-mixed-replace; boundary=--myboundary\r\n"
-                "\r\n";
-
-	if (WRITE(cfd, reply_headers, strlen(reply_headers)) <= 0)
-	{
-		log(LL_DEBUG, "short write on response header");
-		close(cfd);
-		return;
-	}
-
-	if (!get)
-	{
-		close(cfd);
-		return;
-	}
-
-	bool first = true;
-
-	uint64_t prev = 0;
-	time_t end = time(NULL) + time_limit;
-	for(;(time_limit <= 0 || time(NULL) < end) && !*global_stopflag;)
-	{
-		int w = -1, h = -1;
-		uint8_t *work = NULL;
-		size_t work_len = 0;
-		v -> get_frame(E_JPEG, quality, &prev, &w, &h, &work, &work_len);
-
-		// send header
-                const char term[] = "\r\n";
-                if (first)
-                        first = false;
-                else if (WRITE(cfd, term, strlen(term)) <= 0)
-		{
-			log(LL_DEBUG, "short write on terminating cr/lf");
-			free(work);
-                        break;
-		}
-
-		char img_h[4096] = { 0 };
-		int len = snprintf(img_h, sizeof img_h, 
-			"--myboundary\r\n"
-			"Content-Type: image/jpeg\r\n"
-			"Content-Length: %zu\r\n"
-			"\r\n", work_len);
-		if (WRITE(cfd, img_h, len) <= 0)
-		{
-			log(LL_DEBUG, "short write on boundary header");
-			free(work);
-			break;
-		}
-
-		if (WRITE(cfd, reinterpret_cast<char *>(work), work_len) <= 0)
-		{
-			log(LL_DEBUG, "short write on img data");
-			free(work);
-			break;
-		}
-
-		free(work);
-
-		// FIXME adapt this by how long the wait_for_frame took
-		if (fps > 0) {
-			double us = 1000000.0 / fps;
-			if (us)
-				usleep((useconds_t)us);
-		}
-	}
-}
 
 void send_mjpeg_stream(int cfd, source *s, double fps, int quality, bool get, int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h, instance_t *const i)
 {
@@ -1046,12 +968,13 @@ void http_server::mjpeg_stream_url(configuration_t *const cfg, const std::string
 	*page_url = myformat("index.html?inst=%s", url_escape(inst -> name).c_str()); 
 }
 
-view *find_view(std::vector<view *> *const views, const std::string & id)
+view *find_view(instance_t *const views, const std::string & id)
 {
 	if (!views)
 		return NULL;
 
-	for(view *v : *views) {
+	for(interface *cur : views -> interfaces) {
+		view *v = (view *)cur;
 		if (v -> get_id() == id)
 			return v;
 	}
@@ -1059,7 +982,7 @@ view *find_view(std::vector<view *> *const views, const std::string & id)
 	return NULL;
 }
 
-void handle_http_client(int cfd, double fps, int quality, int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, const std::string & snapshot_dir, const bool allow_admin, const bool archive_acces, configuration_t *const cfg, std::vector<view *> *const views)
+void handle_http_client(int cfd, double fps, int quality, int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, const std::string & snapshot_dir, const bool allow_admin, const bool archive_acces, configuration_t *const cfg, instance_t *const views)
 {
 	sigset_t all_sigs;
 	sigfillset(&all_sigs);
@@ -1129,6 +1052,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	std::map<std::string, std::string> pars;
 
 	instance_t *inst = NULL;
+	source *s = NULL;
 
 	if (!motion_compatible) {
 		char *dummy = strchr(path, '\r');
@@ -1177,14 +1101,19 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 
 			free(pars_str);
 
-			auto inst_it = pars.find("inst");
+			auto int_it = pars.find("int"); // interface
+			if (int_it != pars.end())
+				find_by_id(cfg, int_it -> second, &inst, (interface **)&s);
 
+			auto inst_it = pars.find("inst"); // instance
 			if (inst_it != pars.end())
 				inst = find_instance_by_name(cfg, inst_it -> second);
+
+			if (!s)
+				s = find_source(inst);
 		}
 	}
 
-	source *const s = inst ? find_source(inst) : NULL;
 	if (s)
 		s -> register_user();
 
@@ -1198,17 +1127,6 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 
 	if ((path == NULL || strcmp(path, "stream.mjpeg") == 0 || motion_compatible) && s)
 		send_mjpeg_stream(cfd, s, fps, quality, get, time_limit, filters, global_stopflag, r, resize_w, resize_h, inst);
-	else if (strcmp(path, "view-proxy") == 0 && views) {
-		auto view_it = pars.find("id");
-		std::string id;
-
-		if (view_it != pars.end())
-			id = view_it -> second;
-
-		view *v = find_view(views, id);
-
-		send_mjpeg_view_stream(cfd, v, fps, quality, get, time_limit, global_stopflag);
-	}
 	else if (strcmp(path, "stream.mpng") == 0 && s)
 		send_mpng_stream(cfd, s, fps, get, time_limit, filters, global_stopflag, r, resize_w, resize_h, inst);
 	else if (strcmp(path, "image.png") == 0 && s)
@@ -1270,13 +1188,15 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 		else {
 			reply = http_200_header + page_header + "<h2>views</h2>";
 
-			if (!views || views -> empty())
+			if (!views || views -> interfaces.empty())
 				reply += "<b>No view defined</b>";
 			else {
 				reply += "<ul>";
 
-				for(view *cv : *views) 
+				for(interface *v : views -> interfaces)  {
+					view *cv = (view *)v;
 					reply += myformat("<li><a href=\"view-view?id=%s\">%s</a>", cv -> get_id().c_str(), (cv -> get_descr().empty() ? cv -> get_id() : cv -> get_descr()).c_str());
+				}
 
 				reply += "</ul>";
 			}
@@ -1515,7 +1435,7 @@ void * handle_http_client_thread(void *ct_in)
 	return NULL;
 }
 
-http_server::http_server(configuration_t *const cfg, const std::string & id, const std::string & descr, const std::string & http_adapter, const int http_port, const double fps, const int quality, const int time_limit, const std::vector<filter *> *const f, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, const bool allow_admin, const bool archive_acces, const std::string & snapshot_dir, const bool is_rest, std::vector<view *> *const views) : cfg(cfg), interface(id, descr), fps(fps), quality(quality), time_limit(time_limit), f(f), r(r), resize_w(resize_w), resize_h(resize_h), motion_compatible(motion_compatible), allow_admin(allow_admin), archive_acces(archive_acces), snapshot_dir(snapshot_dir), is_rest(is_rest), views(views)
+http_server::http_server(configuration_t *const cfg, const std::string & id, const std::string & descr, const std::string & http_adapter, const int http_port, const double fps, const int quality, const int time_limit, const std::vector<filter *> *const f, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, const bool allow_admin, const bool archive_acces, const std::string & snapshot_dir, const bool is_rest, instance_t  *const views) : cfg(cfg), interface(id, descr), fps(fps), quality(quality), time_limit(time_limit), f(f), r(r), resize_w(resize_w), resize_h(resize_h), motion_compatible(motion_compatible), allow_admin(allow_admin), archive_acces(archive_acces), snapshot_dir(snapshot_dir), is_rest(is_rest), views(views)
 {
 	fd = start_listen(http_adapter.c_str(), http_port, 5);
 	ct = CT_HTTPSERVER;

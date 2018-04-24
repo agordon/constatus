@@ -454,12 +454,12 @@ view * load_view(configuration_t *const cfg, const Setting & in)
 		v = new view_all(cfg, id, descr, ids);
 	}
 	else
-		error_exit(false, "Currently only \"html-grid\" and \"source-switch\" (for views, id %s) are supported", id.c_str());
+		error_exit(false, "Currently only \"html-grid\", \"source-switch\" and all (for views, id %s) are supported", id.c_str());
 
 	return v;
 }
 
-void load_http_servers(configuration_t *const cfg, instance_t *const ci, const Setting & hs, const bool local_instance, source *const s, resize *const r, std::vector<view *> *const views, meta *const m)
+void load_http_servers(configuration_t *const cfg, instance_t *const ci, const Setting & hs, const bool local_instance, source *const s, resize *const r, instance_t *const views, meta *const m)
 {
 	size_t n_hl = hs.getLength();
 
@@ -917,9 +917,12 @@ int main(int argc, char *argv[])
 
 	//***
 	log(LL_INFO, "Configuring views...");
-	std::vector<view *> views;
+	instance_t *views = NULL;
 	try {
 		const Setting & v = root.lookup("views");
+
+		views = new instance_t; // ci = current instance
+		views -> name = "views";
 
 		size_t n_v = v.getLength();
 		log(LL_DEBUG, " %zu views", n_v);
@@ -928,8 +931,10 @@ int main(int argc, char *argv[])
 			const Setting & cv = v[i];
 
 			view *v = load_view(&cfg, cv);
-			views.push_back(v);
+			views -> interfaces.push_back(v);
 		}
+
+		cfg.instances.push_back(views);
 	}
 	catch(SettingNotFoundException & snfe) {
 		log(LL_INFO, " no stream-to-disk backends defined");
@@ -937,7 +942,7 @@ int main(int argc, char *argv[])
 
 	try {
 		log(LL_INFO, "Loading global HTTP(/REST) server(s)");
-		load_http_servers(&cfg, main_instance, root["global-http-server"], false, NULL, NULL, &views, NULL);
+		load_http_servers(&cfg, main_instance, root["global-http-server"], false, NULL, NULL, views, NULL);
 	}
 	catch(const SettingNotFoundException &nfex) {
 		log(LL_INFO, " no global HTTP(/REST) server(s)");
@@ -1028,9 +1033,6 @@ int main(int argc, char *argv[])
 			t -> stop();
 	}
 
-	for(view *v : views)
-		v -> stop();
-
 	if (clnr)
 		clnr -> stop();
 
@@ -1042,9 +1044,6 @@ int main(int argc, char *argv[])
 
 		delete i;
 	}
-
-	for(view *v : views)
-		delete v;
 
 	delete r;
 

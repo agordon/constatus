@@ -33,6 +33,7 @@ std::string view_html_grid::get_html() const
 	if (height != -1)
 		dim_css += myformat("height:%dpx;", height);
 
+	// FIXME html refresh elke interval seconden en dan een index_offset-parameter opgeven voor in de `sources.at()'
 	std::string out = myformat("<html><head><style>.grid-container {\n%s;display: grid;\ngrid-template-columns: %s;\ngrid-column-gap:5px;\ngrid-row-gap:5px;grid-template-rows:%s;\n}\n.grid-item { }\n</style></head><body>", dim_css.c_str(), col_size.c_str(), row_size.c_str());
 
 	std::string dim_img;

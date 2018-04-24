@@ -7,7 +7,7 @@
 #include "interface.h"
 #include "source.h"
 
-class view : public interface
+class view : public source
 {
 protected:
 	configuration_t *const cfg;
@@ -24,3 +24,5 @@ public:
 
 	void operator()();
 };
+
+view *find_view(instance_t *const inst);

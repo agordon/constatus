@@ -26,7 +26,7 @@ std::string view_ss::get_html() const
 		dim_img += myformat(" height=%d", height);
 
 	// FIXME url-escape
-	return myformat("<html><head><style></style></head><body><img src=\"view-proxy?id=%s\"%s></body></html>", id.c_str(), dim_img.c_str());
+	return myformat("<html><head><style></style></head><body><img src=\"stream.mjpeg?int=%s\"%s></body></html>", id.c_str(), dim_img.c_str());
 }
 
 bool view_ss::get_frame(const encoding_t pe, const int jpeg_quality, uint64_t *ts, int *width, int *height, uint8_t **frame, size_t *frame_len)

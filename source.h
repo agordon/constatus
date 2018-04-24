@@ -28,11 +28,13 @@ protected:
 
 	std::atomic_int user_count;
 
+	source(const std::string & id, const std::string & descr);
+
 public:
 	source(const std::string & id, const std::string & descr, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout);
 	virtual ~source();
 
-	bool get_frame(const encoding_t pe, const int jpeg_quality, uint64_t *ts, int *width, int *height, uint8_t **frame, size_t *frame_len);
+	virtual bool get_frame(const encoding_t pe, const int jpeg_quality, uint64_t *ts, int *width, int *height, uint8_t **frame, size_t *frame_len);
 	void set_frame(const encoding_t pe, const uint8_t *const data, const size_t size);
 	void set_scaled_frame(const uint8_t *const in, const int sourcew, const int sourceh);
 	void set_size(const int w, const int h) { width = w; height = h; }
