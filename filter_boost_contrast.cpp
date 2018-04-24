@@ -13,7 +13,7 @@ filter_boost_contrast::~filter_boost_contrast()
 {
 }
 
-void filter_boost_contrast::apply(const uint64_t ts, const int w, const int h, const uint8_t *const prev, uint8_t *const in_out)
+void filter_boost_contrast::apply(instance_t *const i, const uint64_t ts, const int w, const int h, const uint8_t *const prev, uint8_t *const in_out)
 {
 	uint8_t lowest_br = 255, highest_br = 0;
 

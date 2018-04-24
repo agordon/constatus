@@ -12,7 +12,7 @@ filter_grayscale::~filter_grayscale()
 {
 }
 
-void filter_grayscale::apply_io(const uint64_t ts, const int w, const int h, const uint8_t *const prev, const uint8_t *in, uint8_t *out)
+void filter_grayscale::apply_io(instance_t *const i, const uint64_t ts, const int w, const int h, const uint8_t *const prev, const uint8_t *in, uint8_t *out)
 {
 	for(int i=0; i<w*h; i++) {
 		const uint8_t g = (*in++ + *in++ + *in++) / 3;

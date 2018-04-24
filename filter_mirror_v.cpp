@@ -12,7 +12,7 @@ filter_mirror_v::~filter_mirror_v()
 {
 }
 
-void filter_mirror_v::apply_io(const uint64_t ts, const int w, const int h, const uint8_t *const prev, const uint8_t *const in, uint8_t *const out)
+void filter_mirror_v::apply_io(instance_t *const i, const uint64_t ts, const int w, const int h, const uint8_t *const prev, const uint8_t *const in, uint8_t *const out)
 {
 	const size_t bytes = w * 3;
 
