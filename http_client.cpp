@@ -120,6 +120,9 @@ bool http_get(const std::string & url, const bool ignore_cert, const char *const
 
 	bool ok = true;
 	if (curl_easy_perform(ch)) {
+		free(data.p);
+		data.p = NULL;
+		data.len = 0;
 		log(LL_ERR, "curl_easy_perform() failed: %s", error);
 		ok = false;
 	}
