@@ -207,9 +207,7 @@ std::vector<filter *> *load_filters(const Setting & in, resize *const r, meta *c
 		const Setting & ae = in[i];
 
 		std::string s_type = cfg_str(ae, "type", "filter-type (h-mirror, marker, etc)", false, "");
-		if (s_type == "null")
-			filters -> push_back(new filter());
-		else if (s_type == "h-mirror")
+		if (s_type == "h-mirror")
 			filters -> push_back(new filter_mirror_h());
 		else if (s_type == "v-mirror")
 			filters -> push_back(new filter_mirror_v());
