@@ -13,5 +13,5 @@ public:
 	~filter_overlay();
 
 	bool uses_in_out() const { return false; }
-	void apply(instance_t *const i, const uint64_t ts, const int w, const int h, const uint8_t *const prev, uint8_t *const in_out);
+	void apply(instance_t *const i, interface *const specific_int, const uint64_t ts, const int w, const int h, const uint8_t *const prev, uint8_t *const in_out);
 };

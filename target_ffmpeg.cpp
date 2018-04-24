@@ -493,7 +493,7 @@ static AVFrame *get_video_frame(OutputStream *ost, source *const s, uint64_t *co
 		}
 	}
 
-	apply_filters(inst, filters, *prev_frame, work, *prev_ts, w, h);
+	apply_filters(inst, NULL, filters, *prev_frame, work, *prev_ts, w, h);
 
 	/* as we only generate a YUV420P picture, we must convert it
 	 * to the codec pixel format if needed */

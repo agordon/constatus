@@ -18,9 +18,9 @@ filter_add_scaled_text::~filter_add_scaled_text()
 {
 }
 
-void filter_add_scaled_text::apply_io(instance_t *const i, const uint64_t ts, const int w, const int h, const uint8_t *const prev, const uint8_t *const in, uint8_t *const out)
+void filter_add_scaled_text::apply_io(instance_t *const i, interface *const specific_int, const uint64_t ts, const int w, const int h, const uint8_t *const prev, const uint8_t *const in, uint8_t *const out)
 {
-	std::string text_out = unescape(what, ts, i);
+	std::string text_out = unescape(what, ts, i, specific_int);
 
 	uint32_t *temp = NULL;
 	cairo_surface_t *const cs = rgb_to_cairo(in, w, h, &temp);

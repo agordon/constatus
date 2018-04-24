@@ -125,7 +125,7 @@ void send_mjpeg_stream(int cfd, source *s, double fps, int quality, bool get, in
 		}
 		else
 		{
-			apply_filters(i, filters, prev_frame, work, prev, w, h);
+			apply_filters(i, s, filters, prev_frame, work, prev, w, h);
 
 			char *data_out = NULL;
 			size_t data_out_len = 0;
@@ -225,7 +225,7 @@ void send_mpng_stream(int cfd, source *s, double fps, bool get, const int time_l
 		size_t work_len = 0;
 		s -> get_frame(E_RGB, -1, &prev, &w, &h, &work, &work_len);
 
-		apply_filters(inst, filters, prev_frame, work, prev, w, h);
+		apply_filters(inst, s, filters, prev_frame, work, prev, w, h);
 
 		data_out = NULL;
 		data_out_len = 0;
@@ -334,7 +334,7 @@ void send_png_frame(int cfd, source *s, bool get, const std::vector<filter *> *c
 	if (!fh)
 		error_exit(true, "open_memstream() failed");
 
-	apply_filters(inst, filters, NULL, work, prev_ts, w, h);
+	apply_filters(inst, s, filters, NULL, work, prev_ts, w, h);
 
 	if (resize_h != -1 || resize_w != -1) {
 		int target_w = resize_w != -1 ? resize_w : w;
@@ -404,7 +404,7 @@ void send_jpg_frame(int cfd, source *s, bool get, int quality, const std::vector
 	if (filters -> empty() && !sc)
 		fwrite(work, work_len, 1, fh);
 	else {
-		apply_filters(inst, filters, NULL, work, prev_ts, w, h);
+		apply_filters(inst, s, filters, NULL, work, prev_ts, w, h);
 
 		if (resize_h != -1 || resize_w != -1) {
 			int target_w = resize_w != -1 ? resize_w : w;

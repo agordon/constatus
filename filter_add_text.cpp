@@ -1454,7 +1454,7 @@ void replace_double(meta *const m, std::string *const work, const std::string & 
 	work -> assign(search_replace(*work, key, myformat("%f", val.second)));
 }
 
-std::string unescape(const std::string & in, const uint64_t ts, instance_t *const i)
+std::string unescape(const std::string & in, const uint64_t ts, instance_t *const i, interface *const specific_int)
 {
 	time_t now = (time_t)(ts / 1000 / 1000);
 	struct tm ptm;
@@ -1473,7 +1473,7 @@ std::string unescape(const std::string & in, const uint64_t ts, instance_t *cons
 	free(text_out);
 
 	meta *m = NULL;
-	source *s = find_source(i);
+	source *s = specific_int ? (source *)specific_int : find_source(i);
 	if (s) {
 		m = s -> get_meta();
 
@@ -1575,11 +1575,11 @@ void add_text(unsigned char *const img, const int width, const int height, const
 	}
 }
 
-void print_timestamp(unsigned char *const img, const int width, const int height, const std::string & text, const text_pos_t n_pos, const uint64_t ts, instance_t *const i)
+void print_timestamp(unsigned char *const img, const int width, const int height, const std::string & text, const text_pos_t n_pos, const uint64_t ts, instance_t *const i, interface *const specific_int)
 {
 	int x = 0, y = 0;
 
-	std::string text_out = unescape(text, ts, i);
+	std::string text_out = unescape(text, ts, i, specific_int);
 
 	int n_lines = 0, max_ll = 0;
 	find_text_dim(text_out.c_str(), &n_lines, &max_ll);
@@ -1607,7 +1607,7 @@ void print_timestamp(unsigned char *const img, const int width, const int height
 	add_text(img, width, height, text_out.c_str(), x, y);
 }
 
-void filter_add_text::apply(instance_t *const i, const uint64_t ts, const int w, const int h, const uint8_t *const prev, uint8_t *const in_out)
+void filter_add_text::apply(instance_t *const i, interface *const specific_int, const uint64_t ts, const int w, const int h, const uint8_t *const prev, uint8_t *const in_out)
 {
-	print_timestamp(in_out, w, h, what, tp, ts, i);
+	print_timestamp(in_out, w, h, what, tp, ts, i, specific_int);
 }

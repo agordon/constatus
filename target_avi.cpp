@@ -106,7 +106,7 @@ void target_avi::operator()()
 		if (filters -> empty())
 			gwavi_add_frame(gwavi, work, work_len);
 		else {
-			apply_filters(inst, filters, prev_frame, work, prev_ts, w, h);
+			apply_filters(inst, NULL, filters, prev_frame, work, prev_ts, w, h);
 
 			char *data = NULL;
 			size_t data_size = 0;

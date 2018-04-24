@@ -33,7 +33,7 @@ filter_plugin::~filter_plugin()
 	dlclose(library);
 }
 
-void filter_plugin::apply_io(instance_t *const i, const uint64_t ts, const int w, const int h, const uint8_t *const prev, const uint8_t *const in, uint8_t *const out)
+void filter_plugin::apply_io(instance_t *const i, interface *const specific_int, const uint64_t ts, const int w, const int h, const uint8_t *const prev, const uint8_t *const in, uint8_t *const out)
 {
 	apply_filter(arg, ts, w, h, prev, in, out);
 }

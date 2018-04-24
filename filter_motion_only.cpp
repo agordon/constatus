@@ -20,7 +20,7 @@ filter_motion_only::~filter_motion_only()
 	free(prev2);
 }
 
-void filter_motion_only::apply(instance_t *const i, const uint64_t ts, const int w, const int h, const uint8_t *const prev, uint8_t *const in_out)
+void filter_motion_only::apply(instance_t *const i, interface *const specific_int, const uint64_t ts, const int w, const int h, const uint8_t *const prev, uint8_t *const in_out)
 {
 	if (!prev)
 		return;

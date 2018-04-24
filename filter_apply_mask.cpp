@@ -14,7 +14,7 @@ filter_apply_mask::~filter_apply_mask()
 	delete psb;
 }
 
-void filter_apply_mask::apply(instance_t *const i, const uint64_t ts, const int w, const int h, const uint8_t *const prev, uint8_t *const in_out)
+void filter_apply_mask::apply(instance_t *const i, interface *const specific_int, const uint64_t ts, const int w, const int h, const uint8_t *const prev, uint8_t *const in_out)
 {
 	uint8_t *sb = psb -> get_mask(w, h);
 

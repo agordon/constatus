@@ -11,7 +11,7 @@ filter_noise_neighavg::~filter_noise_neighavg()
 {
 }
 
-void filter_noise_neighavg::apply_io(instance_t *const i, const uint64_t ts, const int w, const int h, const uint8_t *const prev, const uint8_t *const in, uint8_t *const out)
+void filter_noise_neighavg::apply_io(instance_t *const i, interface *const specific_int, const uint64_t ts, const int w, const int h, const uint8_t *const prev, const uint8_t *const in, uint8_t *const out)
 {
 	for(int y = 1; y<h-1; y++) {
 		int yo = y * w * 3;

@@ -175,7 +175,7 @@ void target_extpipe::operator()()
 		}
 
 		log(id, LL_DEBUG_VERBOSE, "Write frame");
-		apply_filters(inst, filters, prev_frame, work, prev_ts, w, h);
+		apply_filters(inst, NULL, filters, prev_frame, work, prev_ts, w, h);
 
 		put_frame(p_fd, work, w, h);
 

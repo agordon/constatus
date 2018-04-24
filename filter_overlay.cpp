@@ -24,7 +24,7 @@ filter_overlay::~filter_overlay()
 	free(pixels);
 }
 
-void filter_overlay::apply(instance_t *const i, const uint64_t ts, const int w, const int h, const uint8_t *const prev, uint8_t *const in_out)
+void filter_overlay::apply(instance_t *const i, interface *const specific_int, const uint64_t ts, const int w, const int h, const uint8_t *const prev, uint8_t *const in_out)
 {
 	int cw = std::min(this -> w, w);
 	int ch = std::min(this -> h, h);

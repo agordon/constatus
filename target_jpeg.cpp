@@ -85,7 +85,7 @@ void target_jpeg::operator()()
 		if (filters -> empty())
 			fwrite(work, work_len, 1, fh);
 		else {
-			apply_filters(inst, filters, prev_frame, work, prev_ts, w, h);
+			apply_filters(inst, NULL, filters, prev_frame, work, prev_ts, w, h);
 
 			char *data = NULL;
 			size_t data_size = 0;

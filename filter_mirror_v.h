@@ -8,5 +8,5 @@ public:
 	~filter_mirror_v();
 
 	bool uses_in_out() const { return true; }
-	void apply_io(instance_t *const i, const uint64_t ts, const int w, const int h, const uint8_t *const prev, const uint8_t *const in, uint8_t *const out);
+	void apply_io(instance_t *const i, interface *const specific_int, const uint64_t ts, const int w, const int h, const uint8_t *const prev, const uint8_t *const in, uint8_t *const out);
 };

@@ -20,7 +20,7 @@ typedef enum
 } text_pos_t;
 
 void find_text_dim(const char *const in, int *const n_lines, int *const n_cols);
-std::string unescape(const std::string & in, const uint64_t ts, instance_t *const i);
+std::string unescape(const std::string & in, const uint64_t ts, instance_t *const i, interface *const specific_int);
 
 class filter_add_text : public filter
 {
@@ -33,5 +33,5 @@ public:
 	~filter_add_text();
 
 	bool uses_in_out() const { return false; }
-	void apply(instance_t *const i, const uint64_t ts, const int w, const int h, const uint8_t *const prev, uint8_t *const in_out);
+	void apply(instance_t *const i, interface *const specific_int, const uint64_t ts, const int w, const int h, const uint8_t *const prev, uint8_t *const in_out);
 };

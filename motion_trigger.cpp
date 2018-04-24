@@ -122,7 +122,7 @@ void motion_trigger::operator()()
 		const int nl3 = noise_level * 3;
 		pthread_rwlock_unlock(&noise_level_lock);
 
-		apply_filters(inst, filters, prev_frame, work, prev_ts, w, h);
+		apply_filters(inst, NULL, filters, prev_frame, work, prev_ts, w, h);
 
 		if (prev_frame) {
 			int cnt = 0;

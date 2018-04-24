@@ -79,7 +79,7 @@ void target_plugin::operator()()
 			}
 		}
 
-		apply_filters(inst, filters, prev_frame, work, prev_ts, w, h);
+		apply_filters(inst, NULL, filters, prev_frame, work, prev_ts, w, h);
 
 		log(id, LL_DEBUG_VERBOSE, "Write frame");
 		sp -> write_frame(sp -> arg, prev_ts, w, h, prev_frame, work);
