@@ -44,7 +44,8 @@ typedef struct {
 	std::atomic_bool *global_stopflag;
 	resize *r;
 	int resize_w, resize_h;
-	bool motion_compatible, allow_admin, archive_acces, is_rest;
+	source *motion_compatible;
+	bool allow_admin, archive_acces, is_rest;
 	configuration_t *cfg;
 	std::string snapshot_dir;
 	instance_t *views;
@@ -996,7 +997,7 @@ view *find_view(instance_t *const views, const std::string & id)
 	return NULL;
 }
 
-void handle_http_client(int cfd, double fps, int quality, int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, const std::string & snapshot_dir, const bool allow_admin, const bool archive_acces, configuration_t *const cfg, instance_t *const views)
+void handle_http_client(int cfd, double fps, int quality, int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h, source *const motion_compatible, const std::string & snapshot_dir, const bool allow_admin, const bool archive_acces, configuration_t *const cfg, instance_t *const views)
 {
 	sigset_t all_sigs;
 	sigfillset(&all_sigs);
@@ -1040,7 +1041,6 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 
 	bool get = true;
 	if (motion_compatible) {
-		Path = strdup("stream.mjpeg");
 	}
 	else if (strncmp(request_headers, "GET ", 4) == 0)
 	{
@@ -1080,7 +1080,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 		if (dummy)
 			*dummy = 0x00;
 
-		log(LL_DEBUG, "URL: %s", path);
+		log(LL_INFO, "URL: %s", path);
 
 		char *q = strchr(path, '?');
 		if (q) {
@@ -1142,6 +1142,9 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	//printf("%s\n", inst -> name.c_str());
 
 	const std::string page_header = myformat(html_header.c_str(), inst ? (" / " + inst -> name).c_str() : "");
+
+	if (s == NULL && motion_compatible)
+		s = motion_compatible;
 
 	if ((path == NULL || strcmp(path, "stream.mjpeg") == 0 || motion_compatible) && s)
 		send_mjpeg_stream(cfd, s, fps, quality, get, time_limit, filters, global_stopflag, r, resize_w, resize_h, cfg, is_view_proxy);
@@ -1462,7 +1465,7 @@ void * handle_http_client_thread(void *ct_in)
 	return NULL;
 }
 
-http_server::http_server(configuration_t *const cfg, const std::string & id, const std::string & descr, const std::string & http_adapter, const int http_port, const double fps, const int quality, const int time_limit, const std::vector<filter *> *const f, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, const bool allow_admin, const bool archive_acces, const std::string & snapshot_dir, const bool is_rest, instance_t  *const views) : cfg(cfg), interface(id, descr), fps(fps), quality(quality), time_limit(time_limit), f(f), r(r), resize_w(resize_w), resize_h(resize_h), motion_compatible(motion_compatible), allow_admin(allow_admin), archive_acces(archive_acces), snapshot_dir(snapshot_dir), is_rest(is_rest), views(views)
+http_server::http_server(configuration_t *const cfg, const std::string & id, const std::string & descr, const std::string & http_adapter, const int http_port, const double fps, const int quality, const int time_limit, const std::vector<filter *> *const f, resize *const r, const int resize_w, const int resize_h, source *const motion_compatible, const bool allow_admin, const bool archive_acces, const std::string & snapshot_dir, const bool is_rest, instance_t  *const views) : cfg(cfg), interface(id, descr), fps(fps), quality(quality), time_limit(time_limit), f(f), r(r), resize_w(resize_w), resize_h(resize_h), motion_compatible(motion_compatible), allow_admin(allow_admin), archive_acces(archive_acces), snapshot_dir(snapshot_dir), is_rest(is_rest), views(views)
 {
 	fd = start_listen(http_adapter.c_str(), http_port, 5);
 	ct = CT_HTTPSERVER;
@@ -1517,13 +1520,13 @@ void http_server::operator()()
 		ct -> r = r;
 		ct -> resize_w = resize_w;
 		ct -> resize_h = resize_h;
-		ct -> motion_compatible = motion_compatible;
 		ct -> cfg = cfg;
 		ct -> snapshot_dir = snapshot_dir;
 		ct -> allow_admin = allow_admin;
 		ct -> archive_acces = archive_acces;
 		ct -> is_rest = is_rest;
 		ct -> views = views;
+		ct -> motion_compatible = motion_compatible;
 
 		pthread_t th;
 		int rc = -1;

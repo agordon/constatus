@@ -14,7 +14,8 @@ private:
 	const std::vector<filter *> *const f;
 	resize *const r;
 	const int resize_w, resize_h;
-	const bool motion_compatible, allow_admin, archive_acces;
+	source *const motion_compatible;
+	const bool allow_admin, archive_acces;
 	configuration_t *const cfg;
 	const std::string snapshot_dir;
 	const bool is_rest;
@@ -23,7 +24,7 @@ private:
 	int fd;
 
 public:
-	http_server(configuration_t *const cfg, const std::string & id, const std::string & descr, const std::string & http_adapter, const int http_port, const double fps, const int quality, const int time_limit, const std::vector<filter *> *const f, resize *const r, const int resize_w, const int resize_h, const bool motion_compatible, const bool allow_admin, const bool archive_access, const std::string & snapshot_dir, const bool is_rest, instance_t *const views);
+	http_server(configuration_t *const cfg, const std::string & id, const std::string & descr, const std::string & http_adapter, const int http_port, const double fps, const int quality, const int time_limit, const std::vector<filter *> *const f, resize *const r, const int resize_w, const int resize_h, source *const motion_compatible, const bool allow_admin, const bool archive_access, const std::string & snapshot_dir, const bool is_rest, instance_t *const views);
 	virtual ~http_server();
 
 	static void mjpeg_stream_url(configuration_t *const cfg, const std::string & id, std::string *const img_url, std::string *const page_url);

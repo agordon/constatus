@@ -519,7 +519,7 @@ void load_http_servers(configuration_t *const cfg, instance_t *const ci, const S
 		if (!find_interval_or_fps(server, &interval, "fps", &fps) && is_rest == false)
 			interval_fps_error("fps", "for showing video frames", id.c_str());
 
-		interface *h = new http_server(cfg, id, descr, listen_adapter, listen_port, fps, jpeg_quality, time_limit, http_filters, r, resize_w, resize_h, motion_compatible, allow_admin, archive_access, snapshot_dir, is_rest, views);
+		interface *h = new http_server(cfg, id, descr, listen_adapter, listen_port, fps, jpeg_quality, time_limit, http_filters, r, resize_w, resize_h, motion_compatible ? s : NULL, allow_admin, archive_access, snapshot_dir, is_rest, views);
 		ci -> interfaces.push_back(h);
 	}
 }
