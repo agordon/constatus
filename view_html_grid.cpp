@@ -35,8 +35,12 @@ std::string view_html_grid::get_html(const std::map<std::string, std::string> & 
 
 	size_t nr = 0;
 	auto it = pars.find("offset");
-	if (it != pars.end())
-		nr = labs(atol(it -> second.c_str())) % sources.size();
+	if (it != pars.end()) {
+		nr = labs(atol(it -> second.c_str()));
+
+		if (nr > sources.size())
+			nr = 0;
+	}
 
 	const size_t total_view_size = grid_width * grid_height;
 
