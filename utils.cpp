@@ -167,22 +167,18 @@ ssize_t WRITE(int fd, const char *whereto, size_t len)
 
 double get_ts()
 {
-        struct timeval ts;
+	struct timespec tv;
+	clock_gettime(CLOCK_REALTIME, &tv);
 
-        if (gettimeofday(&ts, NULL) == -1)
-                error_exit(true, "gettimeofday failed");
-
-        return double(ts.tv_sec) + double(ts.tv_usec) / 1000000.0;
+        return double(tv.tv_sec) + double(tv.tv_nsec) / 1000000000.0;
 }
 
 uint64_t get_us()
 {
-        struct timeval ts;
+	struct timespec tv;
+	clock_gettime(CLOCK_REALTIME, &tv);
 
-        if (gettimeofday(&ts, NULL) == -1)
-                error_exit(true, "gettimeofday failed");
-
-        return uint64_t(ts.tv_sec) * 1000 * 1000 + uint64_t(ts.tv_usec);
+	return uint64_t(tv.tv_sec) * uint64_t(1000 * 1000) + uint64_t(tv.tv_nsec / 1000);
 }
 
 std::string myformat(const char *const fmt, ...)

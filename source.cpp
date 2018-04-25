@@ -65,9 +65,9 @@ void source::set_frame(const encoding_t pe, const uint8_t *const data, const siz
 	if (pthread_mutex_lock(&lock) != 0)
 		error_exit(false, "pthread_mutex_lock failed (source::set_frame)");
 
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	ts = uint64_t(tv.tv_sec) * uint64_t(1000 * 1000) + uint64_t(tv.tv_usec);
+	struct timespec tv;
+	clock_gettime(CLOCK_REALTIME, &tv);
+	ts = uint64_t(tv.tv_sec) * uint64_t(1000 * 1000) + uint64_t(tv.tv_nsec / 1000);
 
 	if (pe != E_RGB) {
 		free(frame_rgb);
