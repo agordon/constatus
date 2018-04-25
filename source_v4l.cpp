@@ -163,9 +163,6 @@ source_v4l::source_v4l(const std::string & id, const std::string & descr, const 
 	if (fd == -1)
 		error_exit(true, "Cannot access video4linux device '%s'", dev.c_str());
 
-	if (this -> descr == "")
-		this -> descr = dev;
-
 	// verify that it is a capture device
 	struct v4l2_capability cap;
 	memset(&cap, 0x00, sizeof(cap));

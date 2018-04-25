@@ -22,9 +22,6 @@ source_plugin::source_plugin(const std::string & id, const std::string & descr, 
 	uninit_plugin = (sp_uninit_plugin_t)find_symbol(library, "uninit_plugin", "video source plugin", plugin_filename.c_str());
 
 	arg = init_plugin(this, plugin_arg.c_str());
-
-	if (this -> descr == "")
-		this -> descr = plugin_filename;
 }
 
 source_plugin::~source_plugin()

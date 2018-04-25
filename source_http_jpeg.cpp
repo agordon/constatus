@@ -13,8 +13,6 @@
 
 source_http_jpeg::source_http_jpeg(const std::string & id, const std::string & descr, const std::string & urlIn, const bool ignoreCertIn, const std::string & authIn, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int ll, const double timeout) : source(id, descr, max_fps, r, resize_w, resize_h, ll, timeout), url(urlIn), auth(authIn), ignore_cert(ignoreCertIn)
 {
-	if (this -> descr == "")
-		this -> descr = urlIn;
 }
 
 source_http_jpeg::~source_http_jpeg()

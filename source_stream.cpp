@@ -23,9 +23,6 @@ static bool v = false;
 source_stream::source_stream(const std::string & id, const std::string & descr, const std::string & url, const bool tcp, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout) : source(id, descr, max_fps, r, resize_w, resize_h, loglevel, timeout), url(url), tcp(tcp)
 {
 	v = loglevel >= LL_DEBUG;
-
-	if (this -> descr == "")
-		this -> descr = url;
 }
 
 source_stream::~source_stream()

@@ -219,8 +219,6 @@ process:
 
 source_http_mjpeg::source_http_mjpeg(const std::string & id, const std::string & descr, const std::string & urlIn, const bool ic, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout) : source(id, descr, max_fps, r, resize_w, resize_h, loglevel, timeout), url(urlIn), ignore_cert(ic)
 {
-	if (this -> descr == "")
-		this -> descr = urlIn;
 }
 
 source_http_mjpeg::~source_http_mjpeg()
