@@ -1129,6 +1129,9 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 		}
 	}
 
+	if (s == NULL && motion_compatible)
+		s = motion_compatible;
+
 	if (s)
 		s -> register_user();
 
@@ -1142,9 +1145,6 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	//printf("%s\n", inst -> name.c_str());
 
 	const std::string page_header = myformat(html_header.c_str(), inst ? (" / " + inst -> name).c_str() : "");
-
-	if (s == NULL && motion_compatible)
-		s = motion_compatible;
 
 	if ((path == NULL || strcmp(path, "stream.mjpeg") == 0 || motion_compatible) && s)
 		send_mjpeg_stream(cfd, s, fps, quality, get, time_limit, filters, global_stopflag, r, resize_w, resize_h, cfg, is_view_proxy);
