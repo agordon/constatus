@@ -63,6 +63,9 @@ bool view_ss::get_frame(const encoding_t pe, const int jpeg_quality, uint64_t *t
 		latest_switch = now;
 	}
 
+	if (!cur_source)
+		return false;
+
 	cur_source -> register_user();
 	bool rc = cur_source -> get_frame(pe, jpeg_quality, ts, width, height, frame, frame_len);
 	cur_source -> unregister_user();
