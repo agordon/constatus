@@ -1,6 +1,10 @@
 Records a videofile when motion is detected via a camera.
 This camera can be locally attached to your Linux system or be accessed via MJPEG.
 
+
+features
+--------
+
 Supports:
   input:
    - video4linux
@@ -55,12 +59,15 @@ Required:
 If you don't want to use libexiv2 or ligwavi, then remove them from the Makefile and config.h.
 
 
+How to use
+----------
+
 The program supports cameras that generate YUYV, JPEG, RGB or YUV420 output.
 If your camera emits something different, e.g. P207 (PAC207) then you can use libv4l (by Hans de Goede).
 E.g.:
-LD_PRELOAD=/usr/lib/arm-linux-gnueabihf/libv4l/v4l2convert.so ./constatus -c constatus-v4l.conf (on the raspberry pi)
+LD_PRELOAD=/usr/lib/arm-linux-gnueabihf/libv4l/v4l2convert.so ./constatus -c constatus-v4l.cfg (on the raspberry pi)
 or
-LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libv4lconvert.so ./constatus -c constatus-v4l.conf         (on x64)
+LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libv4lconvert.so ./constatus -c constatus-v4l.cfg         (on x64)
 
 
 The program is configured via a text-file. It is processed by libconfig and thus uses that format.
@@ -84,6 +91,16 @@ If it is unclear what the "selection-bitmap" masks, then try adding it to an "ap
 
 Please check the file CHANGES to see what you need to know when upgrading from an earlier version.
 Read README.rest to get to know how the REST interface works.
+
+
+
+FAQ
+---
+* If I restart the program then sometimes some cameras show an error
+> that is a problem of certain cameras that have a limit on the number of viewers it can handle concurrently; apparently the previous session was not terminated fully
+
+* When I put more than, say, 5 cameras on a web-page (e.g. in an "html-grid"), then things become slow and/or cameras don't show anything.
+> that is a problem with web-browsers not being able to display so many video-streams concurrently. strangely enough I had best results with the safari browser - or limitting to 4 streams per page.
 
 
 (C) 2017-2018 by Folkert van Heusden, released under AGPL v3.0

@@ -26,7 +26,7 @@ private:
 	stream_plugin_t *sp;
 
 public:
-	target_plugin(const std::string & id, const std::string & descr, source *const s, const std::string & store_path, const std::string & prefix, const int quality, const int max_time, const double interval, const std::vector<filter *> *const filters, const std::string & exec_start, const std::string & exec_cycle, const std::string & exec_end, stream_plugin_t *const sp, const int override_fps, instance_t *const inst);
+	target_plugin(const std::string & id, const std::string & descr, source *const s, const std::string & store_path, const std::string & prefix, const int quality, const int max_time, const double interval, const std::vector<filter *> *const filters, const std::string & exec_start, const std::string & exec_cycle, const std::string & exec_end, stream_plugin_t *const sp, const int override_fps, configuration_t *const cfg, const bool is_view_proxy);
 	virtual ~target_plugin();
 
 	void operator()();

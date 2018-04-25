@@ -1,5 +1,6 @@
 // (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #pragma once
+#include <map>
 #include <string>
 #include <vector>
 
@@ -16,7 +17,7 @@ public:
 	view_all(configuration_t *const cfg, const std::string & id, const std::string & descr, const std::vector<std::string> & sources);
 	virtual ~view_all();
 
-	std::string get_html() const;
+	std::string get_html(const std::map<std::string, std::string> & pars) const;
 
 	void operator()();
 };

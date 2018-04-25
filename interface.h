@@ -45,7 +45,7 @@ public:
 	bool pause();
 	bool is_paused() const { return paused; }
 	void unpause();
-	void stop();
+	virtual void stop();
 
 	virtual void operator()() = 0;
 };

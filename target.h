@@ -8,6 +8,7 @@
 #include "interface.h"
 #include "filter.h"
 #include "source.h"
+#include "view.h"
 
 typedef struct
 {
@@ -24,13 +25,14 @@ class target : public interface
 {
 protected:
 	source *s;
-	instance_t *inst;
 	const std::string store_path, prefix;
 	const int max_time;
 	const double interval;
 	const std::vector<filter *> *const filters;
 	const std::string exec_start, exec_cycle, exec_end;
 	const int override_fps;
+	configuration_t *const cfg;
+	const bool is_view_proxy;
 
 	std::vector<frame_t> *pre_record;
 
@@ -39,7 +41,7 @@ protected:
 	void register_file(const std::string & filename);
 
 public:
-	target(const std::string & id, const std::string & descr, source *const s, const std::string & store_path, const std::string & prefix, const int max_time, const double interval, const std::vector<filter *> *const filters, const std::string & exec_start, const std::string & exec_cycle, const std::string & exec_end, const int override_fps, instance_t *const inst);
+	target(const std::string & id, const std::string & descr, source *const s, const std::string & store_path, const std::string & prefix, const int max_time, const double interval, const std::vector<filter *> *const filters, const std::string & exec_start, const std::string & exec_cycle, const std::string & exec_end, const int override_fps, configuration_t *const cfg, const bool is_view_proxy);
 	virtual ~target();
 
 	void start(std::vector<frame_t> *const pre_record, const unsigned long event_nr);

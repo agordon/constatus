@@ -339,7 +339,7 @@ void interval_fps_error(const char *const name, const char *what, const char *id
 	error_exit(false, "Interval/%s %s not set or invalid (e.g. 0) for target (%s). Make sure that you use a float-value for the fps/interval, e.g. 13.0 instead of 13", name, what, id);
 }
 
-target * load_target(const Setting & in, instance_t *const inst, resize *const r, meta *const m)
+target * load_target(const Setting & in, source *const s, resize *const r, meta *const m, configuration_t *const cfg)
 {
 	target *t = NULL;
 
@@ -376,38 +376,36 @@ target * load_target(const Setting & in, instance_t *const inst, resize *const r
 	catch(SettingNotFoundException & snfe) {
 	}
 
-	source *s = find_source(inst);
-
 	if (format == "avi")
 #ifdef WITH_GWAVI
-		t = new target_avi(id, descr, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, override_fps, inst);
+		t = new target_avi(id, descr, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, override_fps, cfg, false);
 #else
 		error_exit(false, "libgwavi not compiled in");
 #endif
 	else if (format == "extpipe") {
 		std::string cmd = cfg_str(in, "cmd", "Command to send the frames to", false, "");
 
-		t = new target_extpipe(id, descr, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, cmd, inst);
+		t = new target_extpipe(id, descr, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, cmd, cfg, false);
 	}
 	else if (format == "ffmpeg") {
 		int bitrate = cfg_int(in, "bitrate", "How many bits per second to emit. For 352x288 200000 is a sane value. This value affects the quality.", true, 200000);
 		std::string type = cfg_str(in, "ffmpeg-type", "E.g. flv, mp4", true, "mp4");
 		std::string const parameters = cfg_str(in, "ffmpeg-parameters", "Parameters specific for ffmpeg.", true, "");
 
-		t = new target_ffmpeg(id, descr, parameters, s, path, prefix, restart_interval, interval, type, bitrate, filters, exec_start, exec_cycle, exec_end, override_fps, inst);
+		t = new target_ffmpeg(id, descr, parameters, s, path, prefix, restart_interval, interval, type, bitrate, filters, exec_start, exec_cycle, exec_end, override_fps, cfg, false);
 	}
 	else if (format == "jpeg")
-		t = new target_jpeg(id, descr, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, inst);
+		t = new target_jpeg(id, descr, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, cfg, false);
 	else if (format == "plugin") {
 		stream_plugin_t *sp = load_stream_plugin(in);
 
-		t = new target_plugin(id, descr, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, sp, override_fps, inst);
+		t = new target_plugin(id, descr, s, path, prefix, jpeg_quality, restart_interval, interval, filters, exec_start, exec_cycle, exec_end, sp, override_fps, cfg, false);
 	}
 	else if (format == "vnc") {
 		std::string listen_adapter = cfg_str(in, "listen-adapter", "network interface to listen on or 0.0.0.0 for all", false, "");
 		int listen_port = cfg_int(in, "listen-port", "port to listen on", false, 5901);
 
-		t = new target_vnc(id, descr, s, listen_adapter, listen_port, restart_interval, interval, filters, exec_start, exec_end, inst);
+		t = new target_vnc(id, descr, s, listen_adapter, listen_port, restart_interval, interval, filters, exec_start, exec_end, cfg, false);
 	}
 	else {
 		error_exit(false, "Format %s is unknown (stream to disk backends)", format.c_str());
@@ -416,7 +414,7 @@ target * load_target(const Setting & in, instance_t *const inst, resize *const r
 	return t;
 }
 
-view * load_view(configuration_t *const cfg, const Setting & in)
+view * load_view(configuration_t *const cfg, const Setting & in, resize *const r, instance_t *const inst)
 {
 	const std::string id = cfg_str(in, "id", "some identifier: used for selecting this module", true, "");
 	const std::string descr = cfg_str(in, "descr", "description: visible in e.g. the http server", true, "");
@@ -440,10 +438,28 @@ view * load_view(configuration_t *const cfg, const Setting & in)
 	view *v = NULL;
 
 	if (type == "html-grid")
-		v = new view_html_grid(cfg, id, descr, width, height, ids, gwidth, gheight);
-	else if (type == "source-switch")
-		v = new view_ss(cfg, id, descr, width, height, ids, interval);
-	else if (type == "all") {
+		v = new view_html_grid(cfg, id, descr, width, height, ids, gwidth, gheight, interval);
+	else if (type == "source-switch") {
+		std::vector<target *> *targets = new std::vector<target *>();
+
+		v = new view_ss(cfg, id, descr, width, height, ids, interval, targets);
+
+		try {
+			const Setting & t = in.lookup("targets");
+
+			size_t n_t = t.getLength();
+			log(LL_DEBUG, " %zu source-switch view target(s)", n_t);
+
+			for(size_t i=0; i<n_t; i++) {
+				const Setting & ct = t[i];
+
+				targets -> push_back(load_target(ct, v, r, NULL, cfg));
+			}
+		}
+		catch(SettingNotFoundException & snfe) {
+		}
+	}
+	else if (type == "html-all") {
 		ids.clear();
 
 		for(instance_t * cur_inst : cfg -> instances) {
@@ -454,7 +470,7 @@ view * load_view(configuration_t *const cfg, const Setting & in)
 		v = new view_all(cfg, id, descr, ids);
 	}
 	else
-		error_exit(false, "Currently only \"html-grid\", \"source-switch\" and all (for views, id %s) are supported", id.c_str());
+		error_exit(false, "Currently only \"html-grid\", \"source-switch\" and \"html-all\" (for views, id %s) are supported", id.c_str());
 
 	return v;
 }
@@ -853,7 +869,7 @@ int main(int argc, char *argv[])
 					for(size_t i=0; i<n_t; i++) {
 						const Setting & ct = t[i];
 
-						motion_targets -> push_back(load_target(ct, ci, r, s -> get_meta()));
+						motion_targets -> push_back(load_target(ct, s, r, s -> get_meta(), &cfg));
 					}
 				}
 				catch(SettingNotFoundException & snfe) {
@@ -898,7 +914,7 @@ int main(int argc, char *argv[])
 			for(size_t i=0; i<n_t; i++) {
 				const Setting & ct = t[i];
 
-				interface *target = load_target(ct, ci, r, s -> get_meta());
+				interface *target = load_target(ct, s, r, s -> get_meta(), &cfg);
 				ci -> interfaces.push_back(target);
 			}
 		}
@@ -930,7 +946,7 @@ int main(int argc, char *argv[])
 		for(size_t i=0; i<n_v; i++) {
 			const Setting & cv = v[i];
 
-			view *v = load_view(&cfg, cv);
+			view *v = load_view(&cfg, cv, r, views);
 			views -> interfaces.push_back(v);
 		}
 
@@ -1036,7 +1052,7 @@ int main(int argc, char *argv[])
 	if (clnr)
 		clnr -> stop();
 
-	log(LL_DEBUG, "Waiting for threads to terminate");
+	log(LL_INFO, "Waiting for threads to terminate");
 
 	for(instance_t * i : cfg.instances) {
 		for(interface *t : i -> interfaces)

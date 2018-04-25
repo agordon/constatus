@@ -11,7 +11,7 @@ view_all::~view_all()
 {
 }
 
-std::string view_all::get_html() const
+std::string view_all::get_html(const std::map<std::string, std::string> & pars) const
 {
 	std::string reply = "<head>"
 				"<link href=\"stylesheet.css\" rel=\"stylesheet\" media=\"screen\">"

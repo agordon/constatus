@@ -79,6 +79,8 @@ void source_stream::operator()()
 	const uint64_t interval = max_fps > 0.0 ? 1.0 / max_fps * 1000.0 * 1000.0 : 0;
 
 	for(;;) {
+		uint64_t session_start = get_us();
+
 		int err = 0, video_stream_index = -1;
 		AVDictionary *opts = NULL;
 		AVCodecContext *codec_ctx = NULL;
@@ -195,7 +197,7 @@ void source_stream::operator()()
 
 					stream = avformat_new_stream(output_ctx, NULL);
 
-					avcodec_parameters_to_context(stream->codec, format_ctx->streams[video_stream_index]->codecpar);
+					avcodec_parameters_to_context(avcodec_alloc_context3(codec), format_ctx->streams[video_stream_index]->codecpar);
 
 					stream->sample_aspect_ratio = format_ctx->streams[video_stream_index]->codecpar->sample_aspect_ratio;
 				}
@@ -270,7 +272,12 @@ void source_stream::operator()()
 		if (local_stop_flag)
 			break;
 
-		usleep(101000);
+		uint64_t session_end = get_us();
+
+		if (session_end - session_start < 1000000)
+			sleep(1); // FIXME exp backoff
+		else
+			usleep(101000);
 	}
 
 	log(id, LL_INFO, "source rtsp thread terminating");

@@ -2,8 +2,9 @@
 #include "view_ss.h"
 #include "http_server.h"
 #include "utils.h"
+#include "log.h"
 
-view_ss::view_ss(configuration_t *const cfg, const std::string & id, const std::string & descr, const int width, const int height, const std::vector<std::string> & sources, const double switch_interval) : view(cfg, id, descr, width, height, sources), switch_interval(switch_interval)
+view_ss::view_ss(configuration_t *const cfg, const std::string & id, const std::string & descr, const int width, const int height, const std::vector<std::string> & sources, const double switch_interval, std::vector<target *> *const targets) : view(cfg, id, descr, width, height, sources), switch_interval(switch_interval), targets(targets)
 {
 	cur_source_index = 0;
         latest_switch = get_us();
@@ -12,13 +13,22 @@ view_ss::view_ss(configuration_t *const cfg, const std::string & id, const std::
 
 view_ss::~view_ss()
 {
+	for(target *t : *targets)
+		delete t;
+	delete targets;
 }
 
 void view_ss::operator()()
 {
+	log(LL_INFO, "Starting %zu targets", targets -> size());
+
+	for(size_t i=0; i<targets -> size(); i++)
+		targets -> at(i) -> start(NULL, 0);
+
+	log(LL_INFO, "view_ss thread terminating");
 }
 
-std::string view_ss::get_html() const
+std::string view_ss::get_html(const std::map<std::string, std::string> & pars) const
 {
 	std::string dim_img;
 	if (width != -1)
@@ -58,4 +68,18 @@ bool view_ss::get_frame(const encoding_t pe, const int jpeg_quality, uint64_t *t
 	cur_source -> unregister_user();
 
 	return rc;
+}
+
+void view_ss::stop()
+{
+	log(LL_INFO, "view_ss::stop");
+
+	for(target *t : *targets) {
+		t -> stop();
+		delete t;
+	}
+
+	targets -> clear();
+
+	interface::stop();
 }

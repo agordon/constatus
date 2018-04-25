@@ -83,9 +83,9 @@ void interface::start()
 
 void interface::stop()
 {
-	if (th) {
-		local_stop_flag = true;
+	local_stop_flag = true;
 
+	if (th) {
 		th -> join();
 		delete th;
 

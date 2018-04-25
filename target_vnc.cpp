@@ -1122,7 +1122,7 @@ void * vnc_main_loop(void *p)
 	return NULL;
 }
 
-target_vnc::target_vnc(const std::string & id, const std::string & descr, source *const s, const std::string & adapter, const int port, const int max_time, const double interval, const std::vector<filter *> *const filters, const std::string & exec_start, const std::string & exec_end, instance_t *const inst) : target(id, descr, s, "", "", max_time, interval, filters, exec_start, "", exec_end, -1, inst) 
+target_vnc::target_vnc(const std::string & id, const std::string & descr, source *const s, const std::string & adapter, const int port, const int max_time, const double interval, const std::vector<filter *> *const filters, const std::string & exec_start, const std::string & exec_end, configuration_t *const cfg, const bool is_view_proxy) : target(id, descr, s, "", "", max_time, interval, filters, exec_start, "", exec_end, -1, cfg, is_view_proxy) 
 {
 	fd = start_listen(adapter.c_str(), port, 5);
 

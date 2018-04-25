@@ -558,7 +558,7 @@ bool take_a_picture(source *const s, const std::string & snapshot_dir, const int
 	return rc;
 }
 
-interface * start_a_video(source *const s, const std::string & snapshot_dir, const int quality, instance_t *const inst)
+interface * start_a_video(source *const s, const std::string & snapshot_dir, const int quality, configuration_t *const cfg, const bool is_view_proxy)
 {
 	const std::string id = myformat("%ld", rand()); // FIXME better rand
 	const std::string descr = "snapshot started by HTTP server";
@@ -566,9 +566,9 @@ interface * start_a_video(source *const s, const std::string & snapshot_dir, con
 	std::vector<filter *> *const filters = new std::vector<filter *>();
 
 #ifdef WITH_GWAVI
-	interface *i = new target_avi(id, descr, s, snapshot_dir, "snapshot-", quality, -1, -1, filters, "", "", "", -1, inst);
+	interface *i = new target_avi(id, descr, s, snapshot_dir, "snapshot-", quality, -1, -1, filters, "", "", "", -1, cfg, is_view_proxy);
 #else
-	interface *i = new target_ffmpeg(id, descr, "", s, snapshot_dir, "snapshot-", -1, -1, "mp4", 201000, filters, "", "", "", -1, inst);
+	interface *i = new target_ffmpeg(id, descr, "", s, snapshot_dir, "snapshot-", -1, -1, "mp4", 201000, filters, "", "", "", -1, cfg, is_view_proxy);
 #endif
 	i -> start();
 
@@ -693,7 +693,9 @@ std::string run_rest(configuration_t *const cfg, const std::string & path, const
 		}
 	}
 	else if (cmd && parts -> at(1) == "start-a-recording" && i -> get_class_type() == CT_SOURCE) {
-		interface *str = start_a_video((source *)i, snapshot_dir, quality, inst);
+		const bool is_view_proxy = strstr(pars.c_str(), "view-proxy") != NULL;
+
+		interface *str = start_a_video((source *)i, snapshot_dir, quality, cfg, is_view_proxy);
 
 		if (str) {
 			json_object_set_new(json, "msg", json_string("OK"));
@@ -955,7 +957,7 @@ const std::string html_header =
 		"<title>" NAME " " VERSION "</title>"
 		"</head>"
 		"<body>"
-		"<h1>" NAME " " VERSION " / %s</h1>";
+		"<h1>" NAME " " VERSION "%s</h1>";
 
 const std::string html_tail =
 		"<p><br><br><br></p><hr><div id=\"tail\"><p>" NAME " was written by folkert@vanheusden.com</p></div>"
@@ -1138,7 +1140,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 	//if (inst)
 	//printf("%s\n", inst -> name.c_str());
 
-	const std::string page_header = myformat(html_header.c_str(), inst ? inst -> name.c_str() : "(everything)");
+	const std::string page_header = myformat(html_header.c_str(), inst ? (" / " + inst -> name).c_str() : "");
 
 	if ((path == NULL || strcmp(path, "stream.mjpeg") == 0 || motion_compatible) && s)
 		send_mjpeg_stream(cfd, s, fps, quality, get, time_limit, filters, global_stopflag, r, resize_w, resize_h, cfg, is_view_proxy);
@@ -1215,6 +1217,15 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 
 				reply += "</ul>";
 			}
+
+			reply += "<h2>instances</h2><ul>";
+			for(instance_t *inst : cfg -> instances) {
+				if (inst -> name == "views")
+					continue;
+
+				reply += myformat("<li><a href=\"index.html?inst=%s\">%s</a>", url_escape(inst -> name).c_str(), inst -> name.c_str());
+			}
+			reply += "</ul>";
 		}
 
 		if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
@@ -1252,7 +1263,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 
 		std::string reply;
 		if (v)
-			reply = http_200_header + v -> get_html();
+			reply = http_200_header + v -> get_html(pars);
 
 		if (WRITE(cfd, reply.c_str(), reply.size()) <= 0)
 			log(LL_DEBUG, "short write on response");
@@ -1398,7 +1409,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 			log(LL_DEBUG, "short write on response header");
 	}
 	else if (strcmp(path, "snapshot-video/") == 0) {
-		interface *i = start_a_video(s, snapshot_dir, quality, inst);
+		interface *i = start_a_video(s, snapshot_dir, quality, cfg, is_view_proxy);
 		//printf("interface %p instance %p\n", i, inst);
 
 		std::string reply = http_200_header + "???";

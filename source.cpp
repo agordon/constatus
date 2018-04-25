@@ -14,7 +14,10 @@
 
 source::source(const std::string & id, const std::string & descr) : interface(id, descr), max_fps(-1), r(NULL), resize_w(-1), resize_h(-1), loglevel(LL_INFO)/*FIXME*/, timeout(3.0/*FIXME*/)
 {
-
+	frame_rgb = NULL;
+	frame_jpeg = NULL;
+	cond = PTHREAD_COND_INITIALIZER;
+	lock = PTHREAD_MUTEX_INITIALIZER;
 }
 
 source::source(const std::string & id, const std::string & descr, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout) : interface(id, descr), max_fps(max_fps), r(r), resize_w(resize_w), resize_h(resize_h), loglevel(loglevel), timeout(timeout)
@@ -116,7 +119,7 @@ bool source::get_frame(const encoding_t pe, const int jpeg_quality, uint64_t *ts
 
 	if (timeout <= 0) {
 		to_s = spec.tv_sec + 1;
-		to_ns = 0;
+		to_ns = spec.tv_nsec;
 	}
 
 	struct timespec tc = { to_s, to_ns };

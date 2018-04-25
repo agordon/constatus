@@ -3,7 +3,7 @@
 #include "http_server.h"
 #include "utils.h"
 
-view_html_grid::view_html_grid(configuration_t *const cfg, const std::string & id, const std::string & descr, const int width, const int height, const std::vector<std::string> & sources, const int gwidth, const int gheight) : view(cfg, id, descr, width, height, sources), grid_width(gwidth), grid_height(gheight)
+view_html_grid::view_html_grid(configuration_t *const cfg, const std::string & id, const std::string & descr, const int width, const int height, const std::vector<std::string> & sources, const int gwidth, const int gheight, const double switch_interval) : view(cfg, id, descr, width, height, sources), grid_width(gwidth), grid_height(gheight), switch_interval(switch_interval)
 {
 }
 
@@ -11,7 +11,7 @@ view_html_grid::~view_html_grid()
 {
 }
 
-std::string view_html_grid::get_html() const
+std::string view_html_grid::get_html(const std::map<std::string, std::string> & pars) const
 {
 	std::string col_size, row_size;
 	for(int i=0; i<grid_width; i++) {
@@ -33,8 +33,18 @@ std::string view_html_grid::get_html() const
 	if (height != -1)
 		dim_css += myformat("height:%dpx;", height);
 
-	// FIXME html refresh elke interval seconden en dan een index_offset-parameter opgeven voor in de `sources.at()'
-	std::string out = myformat("<html><head><style>.grid-container {\n%s;display: grid;\ngrid-template-columns: %s;\ngrid-column-gap:5px;\ngrid-row-gap:5px;grid-template-rows:%s;\n}\n.grid-item { }\n</style></head><body>", dim_css.c_str(), col_size.c_str(), row_size.c_str());
+	size_t nr = 0;
+	auto it = pars.find("offset");
+	if (it != pars.end())
+		nr = labs(atol(it -> second.c_str())) % sources.size();
+
+	const size_t total_view_size = grid_width * grid_height;
+
+	std::string refresh;
+	if (switch_interval >= 1.0 && sources.size() > total_view_size)
+		refresh = myformat("<meta http-equiv=\"refresh\" content=\"%d;URL=?id=%s&offset=%zu\">", int(switch_interval), id.c_str(), nr + total_view_size);
+
+	std::string out = myformat("<html><head>%s<style>.grid-container {\n%s;display: grid;\ngrid-template-columns: %s;\ngrid-column-gap:5px;\ngrid-row-gap:5px;grid-template-rows:%s;\n}\n.grid-item { }\n</style></head><body>", refresh.c_str(), dim_css.c_str(), col_size.c_str(), row_size.c_str());
 
 	std::string dim_img;
 	int each_w = -1, each_h = -1;
@@ -48,8 +58,6 @@ std::string view_html_grid::get_html() const
 	}
 
 	out += myformat("<div class=\"grid-container\">");
-
-	size_t nr = 0;
 
 	for(int y=0; y<grid_height; y++) {
 		for(int x=0; x<grid_width; x++) {
