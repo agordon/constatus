@@ -1142,7 +1142,7 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 
 	const std::string page_header = myformat(html_header.c_str(), inst ? (" / " + inst -> name).c_str() : "");
 
-	if ((path == NULL || strcmp(path, "stream.mjpeg") == 0 || motion_compatible) && s)
+	if (path == NULL || strcmp(path, "stream.mjpeg") == 0 || motion_compatible)
 		send_mjpeg_stream(cfd, s, fps, quality, get, time_limit, filters, global_stopflag, r, resize_w, resize_h, cfg, is_view_proxy);
 	else if (strcmp(path, "stream.mpng") == 0 && s)
 		send_mpng_stream(cfd, s, fps, get, time_limit, filters, global_stopflag, r, resize_w, resize_h, cfg, is_view_proxy);
