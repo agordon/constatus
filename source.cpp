@@ -1,5 +1,6 @@
 // (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include <errno.h>
+#include <inttypes.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -141,7 +142,7 @@ bool source::get_frame(const encoding_t pe, const int jpeg_quality, uint64_t *ts
 
 	if (err || (!frame_rgb && !frame_jpeg)) {
 fail:
-		log(id, LL_INFO, "frame fail %d %p %p | %zu %zu > %zd | %f", err, frame_rgb, frame_jpeg, this -> ts, *ts, this -> ts - *ts, timeout);
+		log(id, LL_INFO, "frame fail %d %p %p | %" PRIu64 " %" PRIu64 " > %" PRId64 " | %f", err, frame_rgb, frame_jpeg, this -> ts, *ts, this -> ts - *ts, timeout);
 
 		if (this -> width <= 0) {
 			if (this -> resize_w != -1) {
