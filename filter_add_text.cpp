@@ -1482,8 +1482,14 @@ std::string unescape(const std::string & in, const uint64_t ts, instance_t *cons
 		replace_double(m, &work, "$pixels-changed$");
 		work = search_replace(work, "$width$", myformat("%d", s -> get_width()));
 		work = search_replace(work, "$height$", myformat("%d", s -> get_height()));
-		work = search_replace(work, "$descr$", s -> get_descr());
+		if (s -> get_descr().empty() && i)
+			work = search_replace(work, "$descr$", i -> name);
+		else
+			work = search_replace(work, "$descr$", s -> get_descr());
 		work = search_replace(work, "$id$", s -> get_id());
+	}
+	else if (i) {
+		work = search_replace(work, "$descr$", i -> name);
 	}
 	std::string motion_string;
 	if (i && check_for_motion(i))
