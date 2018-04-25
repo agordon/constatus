@@ -38,7 +38,7 @@ std::string view_html_grid::get_html(const std::map<std::string, std::string> & 
 	if (it != pars.end()) {
 		nr = labs(atol(it -> second.c_str()));
 
-		if (nr > sources.size())
+		if (nr >= sources.size())
 			nr = 0;
 	}
 
