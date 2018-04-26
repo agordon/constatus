@@ -20,6 +20,8 @@ typedef struct
 	std::mutex lock;
 } configuration_t;
 
+class source;
+
 void find_by_id(const configuration_t *const cfg, const std::string & id, instance_t **inst, interface **i);
 source *find_source(instance_t *const inst);
 instance_t *find_instance_by_interface(const configuration_t *const cfg, const interface *i_f);

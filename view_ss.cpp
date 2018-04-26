@@ -7,7 +7,7 @@
 view_ss::view_ss(configuration_t *const cfg, const std::string & id, const std::string & descr, const int width, const int height, const std::vector<std::string> & sources, const double switch_interval, std::vector<target *> *const targets) : view(cfg, id, descr, width, height, sources), switch_interval(switch_interval), targets(targets)
 {
 	cur_source_index = 0;
-        latest_switch = get_us();
+        latest_switch = 0;
 	cur_source = this;
 }
 
@@ -53,6 +53,9 @@ bool view_ss::get_frame(const encoding_t pe, const int jpeg_quality, uint64_t *t
 	uint64_t si = switch_interval * 1000000.0;
 	if (switch_interval < 1.0)
 		si = 1000000;
+
+	if (latest_switch == 0)
+		latest_switch = get_us();
 
 	uint64_t now = get_us();
 	if (now - latest_switch >= si) {

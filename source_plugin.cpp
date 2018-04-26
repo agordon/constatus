@@ -12,7 +12,7 @@
 #include "log.h"
 #include "utils.h"
 
-source_plugin::source_plugin(const std::string & id, const std::string & descr, const std::string & plugin_filename, const std::string & plugin_arg, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout) : source(id, descr, max_fps, r, resize_w, resize_h, loglevel, timeout)
+source_plugin::source_plugin(const std::string & id, const std::string & descr, const std::string & plugin_filename, const std::string & plugin_arg, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout, std::vector<filter *> *const filters) : source(id, descr, max_fps, r, resize_w, resize_h, loglevel, timeout, filters)
 {
 	library = dlopen(plugin_filename.c_str(), RTLD_NOW);
 	if (!library)

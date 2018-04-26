@@ -11,6 +11,8 @@
 
 typedef enum { E_RGB, E_JPEG } encoding_t;
 
+class filter;
+
 class source : public interface
 {
 protected:
@@ -19,6 +21,7 @@ protected:
 	resize *const r;
 	const int resize_w, resize_h, loglevel;
 	const double timeout;
+	std::vector<filter *> *const filters;
 
 	pthread_mutex_t lock;
 	pthread_cond_t cond;
@@ -31,7 +34,7 @@ protected:
 	source(const std::string & id, const std::string & descr);
 
 public:
-	source(const std::string & id, const std::string & descr, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout);
+	source(const std::string & id, const std::string & descr, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout, std::vector<filter *> *const filters);
 	virtual ~source();
 
 	virtual bool get_frame(const encoding_t pe, const int jpeg_quality, uint64_t *ts, int *width, int *height, uint8_t **frame, size_t *frame_len);

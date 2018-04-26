@@ -12,7 +12,7 @@
 #include "log.h"
 #include "filter_add_text.h"
 
-source::source(const std::string & id, const std::string & descr) : interface(id, descr), max_fps(-1), r(NULL), resize_w(-1), resize_h(-1), loglevel(LL_INFO)/*FIXME*/, timeout(3.0/*FIXME*/)
+source::source(const std::string & id, const std::string & descr) : interface(id, descr), max_fps(-1), r(NULL), resize_w(-1), resize_h(-1), loglevel(LL_INFO)/*FIXME*/, timeout(3.0/*FIXME*/), filters(NULL)
 {
 	frame_rgb = NULL;
 	frame_jpeg = NULL;
@@ -20,7 +20,7 @@ source::source(const std::string & id, const std::string & descr) : interface(id
 	lock = PTHREAD_MUTEX_INITIALIZER;
 }
 
-source::source(const std::string & id, const std::string & descr, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout) : interface(id, descr), max_fps(max_fps), r(r), resize_w(resize_w), resize_h(resize_h), loglevel(loglevel), timeout(timeout)
+source::source(const std::string & id, const std::string & descr, const double max_fps, resize *const r, const int resize_w, const int resize_h, const int loglevel, const double timeout, std::vector<filter *> *const filters) : interface(id, descr), max_fps(max_fps), r(r), resize_w(resize_w), resize_h(resize_h), loglevel(loglevel), timeout(timeout), filters(filters)
 {
 	width = height = -1;
 	ts = 0;
@@ -56,13 +56,15 @@ bool source::work_required()
 	return user_count > 0;
 }
 
-void source::set_frame(const encoding_t pe, const uint8_t *const data, const size_t size)
+void source::set_frame(const encoding_t pe_in, const uint8_t *const data, const size_t size)
 {
 	if (data == NULL || size == 0)
 		return;
 
 	if (pthread_mutex_lock(&lock) != 0)
 		error_exit(false, "pthread_mutex_lock failed (source::set_frame)");
+
+	encoding_t pe = pe_in;
 
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
@@ -98,6 +100,21 @@ void source::set_frame(const encoding_t pe, const uint8_t *const data, const siz
 			}
 
 			memcpy(frame_jpeg, data, size);
+		}
+
+		// FIXME filters
+		if (filters && !filters -> empty()) {
+			if (pe != E_RGB) {
+				if (!read_JPEG_memory(frame_jpeg, frame_jpeg_len, &width, &height, &frame_rgb))
+					return;
+
+				frame_rgb_len = width * height * 3;
+
+				pe = E_RGB;
+			}
+
+			// FIXME
+			apply_filters(NULL, this, filters, NULL, frame_rgb, ts, width, height);
 		}
 	}
 

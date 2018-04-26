@@ -697,6 +697,14 @@ int main(int argc, char *argv[])
 
 			double timeout = cfg_float(o_source, "timeout", "how long to wait for the camera before considering it be offline (in seconds)", true, 1.0);
 
+			std::vector<filter *> *source_filters = NULL;
+			try {
+				const Setting & f = o_source.lookup("filters");
+				source_filters = load_filters(f, r, NULL);
+			}
+			catch(SettingNotFoundException & snfe) {
+			}
+
 			if (s_type == "v4l") {
 				bool pref_jpeg = cfg_bool(o_source, "prefer-jpeg", "if the camera is capable of JPEG, should that be used", true, false);
 				bool rpi_wa = cfg_bool(o_source, "rpi-workaround", "the raspberry pi camera has a bug, this enables a workaround", true, false);
@@ -705,33 +713,33 @@ int main(int argc, char *argv[])
 				int jpeg_quality = cfg_int(o_source, "quality", "JPEG quality, this influences the size", true, 75);
 				std::string dev = cfg_str(o_source, "device", "linux v4l2 device", false, "/dev/video0");
 
-				s = new source_v4l(id, descr, dev, pref_jpeg, rpi_wa, jpeg_quality, max_fps, w, h, r, resize_w, resize_h, loglevel, timeout);
+				s = new source_v4l(id, descr, dev, pref_jpeg, rpi_wa, jpeg_quality, max_fps, w, h, r, resize_w, resize_h, loglevel, timeout, source_filters);
 			}
 			else if (s_type == "jpeg") {
 				bool ign_cert = cfg_bool(o_source, "ignore-cert", "ignore SSL errors", true, false);
 				const std::string auth = cfg_str(o_source, "http-auth", "HTTP authentication string", true, "");
 				const std::string url = cfg_str(o_source, "url", "address of JPEG stream", false, "");
 
-				s = new source_http_jpeg(id, descr, url, ign_cert, auth, max_fps, r, resize_w, resize_h, loglevel, timeout);
+				s = new source_http_jpeg(id, descr, url, ign_cert, auth, max_fps, r, resize_w, resize_h, loglevel, timeout, source_filters);
 			}
 			else if (s_type == "broken-mjpeg") {
 				const std::string url = cfg_str(o_source, "url", "address of MJPEG stream", false, "");
 				bool ign_cert = cfg_bool(o_source, "ignore-cert", "ignore SSL errors", true, false);
 
-				s = new source_http_mjpeg(id, descr, url, ign_cert, max_fps, r, resize_w, resize_h, loglevel, timeout);
+				s = new source_http_mjpeg(id, descr, url, ign_cert, max_fps, r, resize_w, resize_h, loglevel, timeout, source_filters);
 			}
 
 			else if (s_type == "rtsp" || s_type == "mjpeg" || s_type == "stream") {
 				const std::string url = cfg_str(o_source, "url", "address of video stream", false, "");
 				bool tcp = cfg_bool(o_source, "tcp", "use TCP for RTSP transport (instead of default UDP)", true, false);
 
-				s = new source_stream(id, descr, url, tcp, max_fps, r, resize_w, resize_h, loglevel, timeout);
+				s = new source_stream(id, descr, url, tcp, max_fps, r, resize_w, resize_h, loglevel, timeout, source_filters);
 			}
 			else if (s_type == "plugin") {
 				std::string plugin_bin = cfg_str(o_source, "source-plugin-file", "filename of video data source plugin", true, "");
 				std::string plugin_arg = cfg_str(o_source, "source-plugin-parameter", "parameter for video data source plugin", true, "");
 
-				s = new source_plugin(id, descr, plugin_bin, plugin_arg, max_fps, r, resize_w, resize_h, loglevel, timeout);
+				s = new source_plugin(id, descr, plugin_bin, plugin_arg, max_fps, r, resize_w, resize_h, loglevel, timeout, source_filters);
 			}
 			else {
 				log(LL_FATAL, " no source defined!");

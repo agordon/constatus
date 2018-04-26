@@ -888,6 +888,8 @@ void send_file(const int cfd, const std::string & path, const char *const name, 
 			type = "text/css";
 		else if (ext == "flv")
 			type = "video/x-flv";
+		else if (ext == "ico")
+			type = "image/x-icon";
 	}
 
 	log(LL_WARNING, "Sending file %s of type %s", complete_path.c_str(), type.c_str());
@@ -1080,7 +1082,20 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 		if (dummy)
 			*dummy = 0x00;
 
-		log(LL_INFO, "URL: %s", path);
+		std::string ff;
+		char *forwarded_for = strstr(request_headers, "X-Forwarded-For:");
+		if (forwarded_for) {
+			dummy = strchr(forwarded_for, '\r');
+			if (dummy)
+				*dummy = 0x00;
+			dummy = strchr(forwarded_for, '\n');
+			if (dummy)
+				*dummy = 0x00;
+
+			ff = myformat(" (%s)", &forwarded_for[17]);
+		}
+
+		log(LL_INFO, "URL: %s%s", path, ff.c_str());
 
 		char *q = strchr(path, '?');
 		if (q) {
