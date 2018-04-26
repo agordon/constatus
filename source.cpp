@@ -1,5 +1,6 @@
 // (C) 2017-2018 by folkert van heusden, released under AGPL v3.0
 #include <errno.h>
+#include <inttypes.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -66,9 +67,9 @@ void source::set_frame(const encoding_t pe_in, const uint8_t *const data, const 
 
 	encoding_t pe = pe_in;
 
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	ts = uint64_t(tv.tv_sec) * uint64_t(1000 * 1000) + uint64_t(tv.tv_usec);
+	struct timespec tv;
+	clock_gettime(CLOCK_REALTIME, &tv);
+	ts = uint64_t(tv.tv_sec) * uint64_t(1000 * 1000) + uint64_t(tv.tv_nsec / 1000);
 
 	if (pe != E_RGB) {
 		free(frame_rgb);
@@ -158,7 +159,7 @@ bool source::get_frame(const encoding_t pe, const int jpeg_quality, uint64_t *ts
 
 	if (err || (!frame_rgb && !frame_jpeg)) {
 fail:
-		log(id, LL_INFO, "frame fail %d %p %p | %zu %zu | %zd", err, frame_rgb, frame_jpeg, this -> ts, *ts, this -> ts - *ts);
+		log(id, LL_INFO, "frame fail %d %p %p | %" PRIu64 " %" PRIu64 " > %" PRId64 " | %f", err, frame_rgb, frame_jpeg, this -> ts, *ts, this -> ts - *ts, timeout);
 
 		if (this -> width <= 0) {
 			if (this -> resize_w != -1) {
