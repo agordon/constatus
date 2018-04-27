@@ -34,6 +34,7 @@
 #include "target.h"
 #include "target_avi.h"
 #include "target_ffmpeg.h"
+#include "cairo.h"
 
 typedef struct {
 	int fd;
@@ -999,6 +1000,34 @@ view *find_view(instance_t *const views, const std::string & id)
 	return NULL;
 }
 
+bool http_draw_histogram(const std::string & font, const int x_off, const int y_off, const int width, const int height, std::vector<std::string> & labels_x, const double *const val_y, const int n_values, const std::string & metaStr, const int fd)
+{
+	std::string header = 
+		"HTTP/1.0 200\r\n"
+		"Cache-Control: no-cache\r\n"
+		"Pragma: no-cache\r\n"
+		"Server: " NAME " " VERSION "\r\n"
+		"Expires: thu, 01 dec 1994 16:00:00 gmt\r\n"
+		"Content-Type: image/png\r\n"
+		"Connection: close\r\n"
+		"\r\n";
+
+	if (WRITE(fd, header.c_str(), header.size()) == -1)
+		return false;
+
+	uint8_t *temp = NULL;
+	size_t temp_len = 0;
+	FILE *fh = open_memstream((char **)&temp, &temp_len);
+	draw_histogram(font, x_off, y_off, width, height, labels_x, val_y, n_values, metaStr, fh);
+	fclose(fh);
+
+	bool rc = WRITE(fd, (const char *)temp, temp_len) != -1;
+
+	free(temp);
+
+	return rc;
+}
+
 void handle_http_client(int cfd, double fps, int quality, int time_limit, const std::vector<filter *> *const filters, std::atomic_bool *const global_stopflag, resize *const r, const int resize_w, const int resize_h, source *const motion_compatible, const std::string & snapshot_dir, const bool allow_admin, const bool archive_acces, configuration_t *const cfg, instance_t *const views)
 {
 	sigset_t all_sigs;
@@ -1169,6 +1198,14 @@ void handle_http_client(int cfd, double fps, int quality, int time_limit, const 
 		send_png_frame(cfd, s, get, filters, r, resize_w, resize_h, cfg, is_view_proxy);
 	else if (strcmp(path, "image.jpg") == 0 && s)
 		send_jpg_frame(cfd, s, get, quality, filters, r, resize_w, resize_h, cfg, is_view_proxy);
+	else if (strcmp(path, "hist") == 0) {
+		std::vector<std::string> labels_x;
+		labels_x.push_back("een");
+		labels_x.push_back("twee");
+		labels_x.push_back("drie");
+		double val_y[] = { 1, 2, 3 };
+		http_draw_histogram("Arial", 0, 0, 320, 240, labels_x, val_y, 3, "test", cfd);
+	}
 	else if (strcmp(path, "stylesheet.css") == 0) {
 		struct stat st;
 		if (stat("stylesheet.css", &st) == 0)
