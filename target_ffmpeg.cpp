@@ -690,8 +690,8 @@ void target_ffmpeg::operator()()
 			//		encode_audio = !write_audio_frame(oc, &audio_st);
 			//	}
 
-			if (!pre_record || pre_record -> empty())
-				mysleep(interval, &local_stop_flag, s);
+//			if (!pre_record || pre_record -> empty())
+//				mysleep(interval, &local_stop_flag, s);
 		}
 
 		/* Write the trailer, if any. The trailer must be written before you
