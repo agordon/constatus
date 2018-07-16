@@ -891,6 +891,8 @@ void send_file(const int cfd, const std::string & path, const char *const name, 
 			type = "video/x-flv";
 		else if (ext == "ico")
 			type = "image/x-icon";
+		else if (ext == "ebm")
+			type = "video/webm";
 	}
 
 	log(LL_WARNING, "Sending file %s of type %s", complete_path.c_str(), type.c_str());

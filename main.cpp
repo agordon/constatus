@@ -61,7 +61,7 @@ using namespace libconfig;
 std::string cfg_str(const Config & cfg, const char *const key, const char *descr, const bool optional, const std::string & def)
 {
 	try {
-		return cfg.lookup(key);
+		return (const char *)cfg.lookup(key);
 	}
 	catch(const SettingNotFoundException &nfex) {
 		if (!optional)
@@ -425,7 +425,7 @@ view * load_view(configuration_t *const cfg, const Setting & in, resize *const r
 	const Setting & s_ids = in.lookup("sources");
 	size_t n_ids = s_ids.getLength();
 	for(size_t i=0; i<n_ids; i++)
-		ids.push_back(s_ids[i]);
+		ids.push_back((const char *)s_ids[i]);
 
 	int width = cfg_int(in, "width", "width of the total view", true, -1);
 	int height = cfg_int(in, "height", "height of the total view", true, -1);

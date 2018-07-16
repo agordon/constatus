@@ -632,7 +632,7 @@ void target_ffmpeg::operator()()
 		/* Add the audio and video streams using the default format codecs
 		 * and initialize the codecs. */
 		if (fmt->video_codec != AV_CODEC_ID_NONE) {
-			add_stream(&video_st, oc, &video_codec, fmt->video_codec, override_fps != -1 ? override_fps : fps, bitrate, width, height);
+			add_stream(&video_st, oc, &video_codec, fmt->video_codec, override_fps > 0 ? override_fps : fps, bitrate, width, height);
 			have_video = 1;
 			encode_video = 1;
 		}
