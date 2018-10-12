@@ -80,6 +80,7 @@ void send_mjpeg_stream(int cfd, source *s, double fps, int quality, bool get, in
 	bool first = true;
 	uint8_t *prev_frame = NULL;
 	bool sc = resize_h != -1 || resize_w != -1;
+	bool nf = filters == NULL || filters -> empty();
 
 	uint64_t prev = 0;
 	time_t end = time(NULL) + time_limit;
@@ -88,7 +89,7 @@ void send_mjpeg_stream(int cfd, source *s, double fps, int quality, bool get, in
 		int w = -1, h = -1;
 		uint8_t *work = NULL;
 		size_t work_len = 0;
-		s -> get_frame(filters -> empty() && !sc ? E_JPEG : E_RGB, quality, &prev, &w, &h, &work, &work_len);
+		s -> get_frame((nf && !sc) ? E_JPEG : E_RGB, quality, &prev, &w, &h, &work, &work_len);
 
 		// send header
                 const char term[] = "\r\n";
@@ -102,7 +103,7 @@ void send_mjpeg_stream(int cfd, source *s, double fps, int quality, bool get, in
 		}
 
 		// decode, encode, etc frame
-		if (filters -> empty() && !sc) {
+		if (nf && !sc) {
 			char img_h[4096] = { 0 };
 			int len = snprintf(img_h, sizeof img_h, 
 				"--myboundary\r\n"

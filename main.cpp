@@ -1046,7 +1046,8 @@ int main(int argc, char *argv[])
 
 	log(LL_INFO, "System started");
 
-	getchar();
+	for(;;)
+sleep(86400);
 
 	log(LL_INFO, "Terminating");
 
