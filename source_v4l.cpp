@@ -267,6 +267,9 @@ source_v4l::source_v4l(const std::string & id, const std::string & descr, const 
 
 	unmap_size = buf.length;
 	io_buffer = static_cast<uint8_t *>(mmap(NULL, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, fd, buf.m.offset));
+	if (io_buffer == (uint8_t*)-1)
+		error_exit(false, "Failed to map memory for device %s (check LD_PRELOAD, see README.md)",
+					dev.c_str());
 
 	vw = width;
 	vh = height;
