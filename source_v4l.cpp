@@ -232,6 +232,26 @@ source_v4l::source_v4l(const std::string & id, const std::string & descr, const 
 	memcpy(buffer, &pixelformat, 4);
 	log(id, LL_INFO, "chosen: %dx%d %s", width, height, buffer);
 
+	// set frame rate
+	struct v4l2_streamparm parm;
+
+	memset(&parm, 0, sizeof parm);
+	parm.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+	if (ioctl(fd, VIDIOC_G_PARM, &parm) == -1)
+		log(id, LL_ERR, "Unable to get frame rate: %s", strerror(errno));
+
+	parm.parm.capture.timeperframe.numerator = 1;
+	parm.parm.capture.timeperframe.denominator = max_fps;
+
+	if (ioctl(fd, VIDIOC_S_PARM, &parm) == -1)
+		log(id, LL_ERR, "Unable to set frame rate: %s", strerror(errno));
+
+	if (ioctl(fd, VIDIOC_G_PARM, &parm) == -1)
+		log(id, LL_ERR, "Unable to get frame rate: %s", strerror(errno));
+
+	log(id, LL_DEBUG, "Frame rate set: %u/%u", parm.parm.capture.timeperframe.numerator, parm.parm.capture.timeperframe.denominator);
+
 	// set how we retrieve data (using mmaped thingy)
 	struct v4l2_requestbuffers req;
 	memset(&req, 0x00, sizeof(req));
@@ -314,6 +334,8 @@ void source_v4l::operator()()
 			log(id, LL_ERR, "VIDIOC_DQBUF failed: %s", strerror(errno));
 		}
 		else if (work_required() && !is_paused()) {
+		uint64_t end_ts = get_us();
+		printf("took %ld\n", end_ts - start_ts);
 			if (prefer_jpeg) {
 				int cur_n_bytes = buf.bytesused;
 
@@ -350,6 +372,8 @@ void source_v4l::operator()()
 
 		uint64_t end_ts = get_us();
 		int64_t left = interval - (end_ts - start_ts);
+
+		//printf("took %ld, left %ld\n", end_ts - start_ts, left);
 
 		if (interval > 0 && left > 0)
 			usleep(left);
