@@ -7,6 +7,9 @@
 
 void apply_filters(instance_t *const i, interface *const specific_int, const std::vector<filter *> *const filters, const uint8_t *const prev, uint8_t *const work, const uint64_t ts, const int w, const int h)
 {
+	if (!filters)
+		return;
+
 	const size_t bytes = w * h * 3;
 	uint8_t *const temp = (uint8_t *)valloc(bytes);
 

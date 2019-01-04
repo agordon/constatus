@@ -57,6 +57,7 @@ using namespace libconfig;
 #include "view_html_grid.h"
 #include "view_ss.h"
 #include "view_all.h"
+#include "source_delay.h"
 
 std::string cfg_str(const Config & cfg, const char *const key, const char *descr, const bool optional, const std::string & def)
 {
@@ -741,6 +742,15 @@ int main(int argc, char *argv[])
 
 				s = new source_plugin(id, descr, plugin_bin, plugin_arg, max_fps, r, resize_w, resize_h, loglevel, timeout, source_filters);
 			}
+			else if (s_type == "delay") {
+				int n_frames = cfg_int(o_source, "n-frames", "how many frames in the past", false, 1);
+				int jpeg_quality = cfg_int(o_source, "quality", "JPEG quality, this influences the size", true, 75);
+				std::string delayed_source = cfg_str(o_source, "delayed-source", "source to delay", false, "");
+
+				source *s_s = (source *)find_by_id(&cfg, delayed_source);
+
+				s = new source_delay(id, descr, s_s, jpeg_quality, n_frames, max_fps, r, resize_w, resize_h, loglevel, timeout, source_filters);
+			}
 			else {
 				log(LL_FATAL, " no source defined!");
 			}
@@ -1046,7 +1056,8 @@ int main(int argc, char *argv[])
 
 	log(LL_INFO, "System started");
 
-	getchar();
+	for(;;)
+sleep(86400);
 
 	log(LL_INFO, "Terminating");
 

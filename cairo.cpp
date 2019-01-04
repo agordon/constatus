@@ -183,7 +183,7 @@ void draw_histogram(const std::string & font, const int x_off, const int y_off, 
 	for(int index=0; index<n_values; index++) {
 		double x = hist_w * double(index);
 
-		std::string str = labels_x.at(index);
+		std::string str = labels_x.empty() ? shorten(val_y[index]) : labels_x.at(index);
 		int str_w = -1.0, str_h = -1.0;
 		cairo_calc_text_width(cr, font, font_height, str, &str_w, &str_h);
 
