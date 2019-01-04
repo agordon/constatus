@@ -65,6 +65,8 @@ void target_jpeg::operator()()
 	for(;!local_stop_flag;) {
 		pauseCheck();
 
+		double before_ts = get_ts();
+
 		int w = -1, h = -1;
 		uint8_t *work = NULL;
 		size_t work_len = 0;
@@ -102,7 +104,13 @@ void target_jpeg::operator()()
 		free(prev_frame);
 		prev_frame = work;
 
-		mysleep(interval, &local_stop_flag, s);
+		double after_ts = get_ts();
+		double frame_took = after_ts - before_ts;
+		double sleep_left = interval - frame_took;
+		log(id, LL_DEBUG_VERBOSE, "frame took %f, sleep left %f", frame_took, sleep_left);
+
+		if (sleep_left > 0)
+			mysleep(sleep_left, &local_stop_flag, s);
 	}
 
 	free(prev_frame);
