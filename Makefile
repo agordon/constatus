@@ -9,7 +9,7 @@ LDFLAGS=$(DEBUG) -ldl -ljpeg -lpng -lcurl -lgwavi `pkg-config --libs jansson lib
 OBJS=source.o main.o error.o source_v4l.o utils.o picio.o filter.o filter_mirror_v.o filter_noise_neighavg.o http_client.o source_http_jpeg.o filter_mirror_h.o filter_add_text.o filter_grayscale.o exec.o filter_boost_contrast.o filter_marker_simple.o filter_overlay.o source_stream.o filter_add_scaled_text.o filter_plugin.o log.o target.o target_avi.o target_jpeg.o target_plugin.o motion_trigger.o interface.o v4l2_loopback.o source_plugin.o cairo.o resize.o resize_cairo.o target_ffmpeg.o filter_motion_only.o target_extpipe.o meta.o filter_apply_mask.o target_vnc.o selection_mask.o resize_crop.o db.o cleaner.o source_http_mjpeg.o view.o view_html_grid.o view_ss.o cfg.o view_all.o http_server.o source_delay.o
 
 constatus: $(OBJS)
-	$(CXX) $(LDFLAGS) -o constatus -pthread $(OBJS)
+	$(CXX) -o constatus -pthread $(OBJS) $(LDFLAGS)
 
 install: constatus
 	install -Dm755 constatus ${DESTDIR}${PREFIX}/bin/constatus
@@ -26,7 +26,7 @@ clean:
 
 package: clean
 	mkdir constatus-$(VERSION)
-	cp -a man/ *.cpp *.h README constatus.cfg debian favicon.ico stylesheet.css LICENSE filter-plugins meta-plugins motiontrigger-plugins source-plugins streamwriter-plugins Makefile motion-to-constatus.py README README.rest CHANGES constatus-$(VERSION)
+	cp -a man/ *.cpp *.h README.md constatus.cfg debian favicon.ico stylesheet.css LICENSE filter-plugins meta-plugins motiontrigger-plugins source-plugins streamwriter-plugins Makefile motion-to-constatus.py README.rest CHANGES constatus-$(VERSION)
 	tar czf constatus-$(VERSION).tgz constatus-$(VERSION)
 	rm -rf constatus-$(VERSION)
 
