@@ -1,0 +1,25 @@
+[Unit]
+Description = mjpg-streamer-uvc
+
+## Use the following to ensure constatus starts after the network is up.
+After = network.target
+
+[Service]
+Type=simple
+
+ExecStart = /usr/local/bin/mjpg-streamer-uvc-http.sh
+
+# Send STDOUT/STDERR to journal, view it with something like:
+#    journalctl --no-hostname --since today | grep -i mjpg
+StandardOutput = journal
+StandardError = inherit
+
+## Optional: run as specific user (otherwise will run as root).
+##           On Raspian, if apache/nginx is installed, it's likely best
+##           to run as www-data
+##       BUT make sure the user can read/write to /dev/videoXXX
+#User=www-data
+#Group=www-data
+
+[Install]
+WantedBy = multi-user.target
